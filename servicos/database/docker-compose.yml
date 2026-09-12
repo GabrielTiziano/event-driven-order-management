@@ -1,0 +1,15 @@
+version: '3.9'
+
+services:
+    postgres:
+        image: postgres:17.4
+        container_name: postgres_order-management-microservices
+        restart: always
+        environment:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_MULTIPLES_DATABSES: ms_produtos, ms_clientes, ms_pedidos
+        ports:
+        - "5555:5432"
+        volumes:
+        - ./data:/var/lib/postgresql/data

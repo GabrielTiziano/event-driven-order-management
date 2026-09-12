@@ -1,8 +1,8 @@
 spring:
   application:
-    name: microservice-clientes
+    name: microservice-pedidos
   datasource:
-    url: jdbc:postgresql://localhost:5555/ms_clientes
+    url: jdbc:postgresql://localhost:5555/ms_pedidos
     username: postgres
     password: postgres
   flyway:
@@ -11,4 +11,4 @@ spring:
     hibernate:
       ddl-auto: validate
 server:
-  port: 8082
+  port: 8083
