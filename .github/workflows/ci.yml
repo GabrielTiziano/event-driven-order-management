@@ -1,0 +1,111 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-compose:
+    name: Validate docker-compose
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose config
+        run: docker compose -f servicos/database/docker-compose.yml config
+
+  build-and-test:
+    name: Build & Test (${{ matrix.module.name }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        module:
+          - name: microservice-clientes
+            db: ms_clientes
+            needs_db: true
+          - name: microservice-produtos
+            db: ms_produtos
+            needs_db: true
+          - name: microservice-pedidos
+            db: ms_pedidos
+            needs_db: true
+          - name: servicos
+            db: ""
+            needs_db: false
+
+    services:
+      postgres:
+        image: postgres:17.4
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5555:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Create application database
+        if: matrix.module.needs_db
+        env:
+          PGPASSWORD: postgres
+        run: |
+          psql -h localhost -p 5555 -U postgres -tc \
+            "SELECT 1 FROM pg_database WHERE datname = '${{ matrix.module.db }}'" | grep -q 1 \
+            || psql -h localhost -p 5555 -U postgres -c "CREATE DATABASE ${{ matrix.module.db }};"
+
+      - name: Build and test
+        working-directory: ${{ matrix.module.name }}
+        run: |
+          if [ -x ./mvnw ]; then
+            ./mvnw --batch-mode --no-transfer-progress verify
+          else
+            mvn --batch-mode --no-transfer-progress verify
+          fi
+
+      - name: Upload surefire reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-${{ matrix.module.name }}
+          path: ${{ matrix.module.name }}/target/surefire-reports/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  ci-summary:
+    name: CI Summary
+    if: always()
+    needs: [validate-compose, build-and-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check overall result
+        run: |
+          if [ "${{ needs.validate-compose.result }}" != "success" ] || [ "${{ needs.build-and-test.result }}" != "success" ]; then
+            echo "One or more jobs failed."
+            exit 1
+          fi
+          echo "All jobs succeeded."
