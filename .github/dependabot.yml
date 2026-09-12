@@ -1,0 +1,49 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/microservice-clientes"
+    schedule:
+      interval: "weekly"
+    groups:
+      spring-boot:
+        patterns: ["org.springframework.boot:*"]
+    labels: ["dependencies", "microservice-clientes"]
+
+  - package-ecosystem: "maven"
+    directory: "/microservice-produtos"
+    schedule:
+      interval: "weekly"
+    groups:
+      spring-boot:
+        patterns: ["org.springframework.boot:*"]
+    labels: ["dependencies", "microservice-produtos"]
+
+  - package-ecosystem: "maven"
+    directory: "/microservice-pedidos"
+    schedule:
+      interval: "weekly"
+    groups:
+      spring-boot:
+        patterns: ["org.springframework.boot:*"]
+    labels: ["dependencies", "microservice-pedidos"]
+
+  - package-ecosystem: "maven"
+    directory: "/servicos"
+    schedule:
+      interval: "weekly"
+    groups:
+      spring-boot:
+        patterns: ["org.springframework.boot:*"]
+    labels: ["dependencies", "servicos"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]
+
+  - package-ecosystem: "docker"
+    directory: "/servicos/database"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "docker"]
