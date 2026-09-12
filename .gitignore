@@ -13,3 +13,4 @@ target/
 # Logs / env
 *.log
 .env
+servicos/database/data/
