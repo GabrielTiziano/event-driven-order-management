@@ -19,7 +19,7 @@ jobs:
     name: Validate docker-compose
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: docker compose config
         run: docker compose -f servicos/database/docker-compose.yml config
 
@@ -60,7 +60,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 21 (Temurin)
         uses: actions/setup-java@v4
