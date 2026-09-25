@@ -36,4 +36,18 @@ class ProdutoMapperTest {
         assertThat(response.preco()).isEqualByComparingTo("120.00");
         assertThat(response.quantidade()).isEqualTo(50);
     }
+
+    @Test
+    void updateEntity_deveAtualizarCamposPreservandoCodigo() {
+        Produto produto = new Produto(1L, "Antigo", "desc antiga", new BigDecimal("10.00"), 5);
+        ProdutoRequest request = new ProdutoRequest("Novo", "desc nova", new BigDecimal("99.90"), 20);
+
+        ProdutoMapper.updateEntity(produto, request);
+
+        assertThat(produto.getCodigo()).isEqualTo(1L);
+        assertThat(produto.getNome()).isEqualTo("Novo");
+        assertThat(produto.getDescricao()).isEqualTo("desc nova");
+        assertThat(produto.getPreco()).isEqualByComparingTo("99.90");
+        assertThat(produto.getQuantidade()).isEqualTo(20);
+    }
 }

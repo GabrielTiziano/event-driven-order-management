@@ -26,4 +26,11 @@ public class ProdutoMapper {
                 produto.getQuantidade()
         );
     }
+
+    public static void updateEntity(Produto produto, ProdutoRequest request) {
+        produto.setNome(request.nome());
+        produto.setDescricao(request.descricao());
+        produto.setPreco(request.preco());
+        produto.setQuantidade(request.quantidade());
+    }
 }

@@ -16,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -82,5 +82,49 @@ class ProdutoServiceTest {
         when(repository.findAll()).thenReturn(List.of());
 
         assertThat(service.findAllProducts()).isEmpty();
+    }
+
+    @Test
+    void updateProduct_deveAtualizarQuandoExiste() {
+        Produto existente = new Produto(1L, "Antigo", "desc", new BigDecimal("10.00"), 5);
+        ProdutoRequest request = new ProdutoRequest("Novo", "nova desc", new BigDecimal("99.90"), 20);
+        when(repository.findById(1L)).thenReturn(Optional.of(existente));
+        when(repository.save(any(Produto.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ProdutoResponse response = service.updateProduct(1L, request);
+
+        assertThat(response.nome()).isEqualTo("Novo");
+        assertThat(response.preco()).isEqualByComparingTo("99.90");
+        verify(repository).save(existente);
+    }
+
+    @Test
+    void updateProduct_deveLancarExcecaoQuandoNaoExiste() {
+        ProdutoRequest request = new ProdutoRequest("X", "y", new BigDecimal("1.00"), 1);
+        when(repository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.updateProduct(99L, request))
+                .isInstanceOf(ProdutoNotFoundException.class);
+
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void deleteProduct_deveDeletarQuandoExiste() {
+        when(repository.existsById(1L)).thenReturn(true);
+
+        service.deleteProduct(1L);
+
+        verify(repository).deleteById(1L);
+    }
+
+    @Test
+    void deleteProduct_deveLancarExcecaoQuandoNaoExiste() {
+        when(repository.existsById(99L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.deleteProduct(99L))
+                .isInstanceOf(ProdutoNotFoundException.class);
+
+        verify(repository, never()).deleteById(anyLong());
     }
 }
