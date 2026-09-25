@@ -2,6 +2,7 @@ package gabriel.tiziano.microservice_produtos.service;
 
 import gabriel.tiziano.microservice_produtos.dto.ProdutoRequest;
 import gabriel.tiziano.microservice_produtos.dto.ProdutoResponse;
+import gabriel.tiziano.microservice_produtos.entity.Produto;
 import gabriel.tiziano.microservice_produtos.exception.ProdutoNotFoundException;
 import gabriel.tiziano.microservice_produtos.mapper.ProdutoMapper;
 import gabriel.tiziano.microservice_produtos.repository.ProdutoRepository;
@@ -36,5 +37,21 @@ public class ProdutoService {
     @Transactional
     public ProdutoResponse createProduct(ProdutoRequest request) {
         return ProdutoMapper.toResponse(produtoRepository.save(ProdutoMapper.toEntity(request)));
+    }
+
+    @Transactional
+    public ProdutoResponse updateProduct(Long codigo, ProdutoRequest request) {
+        Produto produto = produtoRepository.findById(codigo)
+                .orElseThrow(() -> new ProdutoNotFoundException(codigo));
+        ProdutoMapper.updateEntity(produto, request);
+        return ProdutoMapper.toResponse(produtoRepository.save(produto));
+    }
+
+    @Transactional
+    public void deleteProduct(Long codigo) {
+        if (!produtoRepository.existsById(codigo)) {
+            throw new ProdutoNotFoundException(codigo);
+        }
+        produtoRepository.deleteById(codigo);
     }
 }
