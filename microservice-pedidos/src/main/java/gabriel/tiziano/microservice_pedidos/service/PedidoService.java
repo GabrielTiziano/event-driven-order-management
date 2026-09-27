@@ -2,6 +2,7 @@ package gabriel.tiziano.microservice_pedidos.service;
 
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
@@ -30,9 +31,7 @@ public class PedidoService {
 
     @Transactional(readOnly = true)
     public PedidoResponse findPedidoById(Long codigo) {
-        Pedido pedido = pedidoRepository.findById(codigo)
-                .orElseThrow(() -> new PedidoNotFoundException(codigo));
-        return PedidoMapper.toResponse(pedido);
+        return PedidoMapper.toResponse(buscarPedido(codigo));
     }
 
     @Transactional
@@ -42,10 +41,9 @@ public class PedidoService {
     }
 
     @Transactional
-    public PedidoResponse updatePedido(Long codigo, PedidoRequest request) {
-        Pedido pedido = pedidoRepository.findById(codigo)
-                .orElseThrow(() -> new PedidoNotFoundException(codigo));
-        PedidoMapper.updateEntity(pedido, request);
+    public PedidoResponse updateStatus(Long codigo, PedidoStatusRequest request) {
+        Pedido pedido = buscarPedido(codigo);
+        pedido.setStatus(request.status());
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 
@@ -55,5 +53,10 @@ public class PedidoService {
             throw new PedidoNotFoundException(codigo);
         }
         pedidoRepository.deleteById(codigo);
+    }
+
+    private Pedido buscarPedido(Long codigo) {
+        return pedidoRepository.findById(codigo)
+                .orElseThrow(() -> new PedidoNotFoundException(codigo));
     }
 }

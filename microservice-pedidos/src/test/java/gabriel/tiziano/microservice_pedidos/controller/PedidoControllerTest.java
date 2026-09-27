@@ -1,5 +1,6 @@
 package gabriel.tiziano.microservice_pedidos.controller;
 
+import gabriel.tiziano.microservice_pedidos.dto.PedidoItemResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.service.PedidoService;
@@ -11,6 +12,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -31,31 +33,31 @@ class PedidoControllerTest {
     @MockitoBean
     private PedidoService pedidoService;
 
-    private PedidoResponse response(Long codigo) {
+    private PedidoResponse response(Long codigo, String status) {
         return new PedidoResponse(
-                codigo, 1L, 2L, 3,
-                new BigDecimal("10.00"), new BigDecimal("30.00"),
-                "REALIZADO");
+                codigo, 1L, LocalDateTime.now(), status, new BigDecimal("35.00"),
+                null, "obs", null, null,
+                List.of(new PedidoItemResponse(500L, 10L, 2, new BigDecimal("10.00"))));
     }
 
     @Test
     void findAll_deveRetornar200ComLista() throws Exception {
-        when(pedidoService.findAllPedidos()).thenReturn(List.of(response(1L)));
+        when(pedidoService.findAllPedidos()).thenReturn(List.of(response(1L, "REALIZADO")));
 
         mockMvc.perform(get("/pedidos"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].codigo").value(1))
-                .andExpect(jsonPath("$[0].status").value("REALIZADO"));
+                .andExpect(jsonPath("$[0].itens.length()").value(1));
     }
 
     @Test
     void findById_quandoExiste_deveRetornar200() throws Exception {
-        when(pedidoService.findPedidoById(1L)).thenReturn(response(1L));
+        when(pedidoService.findPedidoById(1L)).thenReturn(response(1L, "REALIZADO"));
 
         mockMvc.perform(get("/pedidos/{codigo}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.codigo").value(1))
-                .andExpect(jsonPath("$.codigoCliente").value(1));
+                .andExpect(jsonPath("$.status").value("REALIZADO"));
     }
 
     @Test
@@ -69,16 +71,15 @@ class PedidoControllerTest {
 
     @Test
     void create_comDadosValidos_deveRetornar201() throws Exception {
-        when(pedidoService.createPedido(any())).thenReturn(response(10L));
+        when(pedidoService.createPedido(any())).thenReturn(response(10L, "REALIZADO"));
 
         String json = """
                 {
                   "codigoCliente": 1,
-                  "codigoProduto": 2,
-                  "quantidade": 3,
-                  "valorUnitario": 10.00,
-                  "total": 30.00,
-                  "status": "REALIZADO"
+                  "observacoes": "obs",
+                  "itens": [
+                    { "codigoProduto": 10, "quantidade": 2, "valorUnitario": 10.00 }
+                  ]
                 }
                 """;
 
@@ -90,15 +91,12 @@ class PedidoControllerTest {
     }
 
     @Test
-    void create_comDadosInvalidos_deveRetornar400() throws Exception {
+    void create_semItens_deveRetornar400() throws Exception {
         String json = """
                 {
-                  "codigoCliente": null,
-                  "codigoProduto": 2,
-                  "quantidade": 0,
-                  "valorUnitario": 10.00,
-                  "total": 30.00,
-                  "status": ""
+                  "codigoCliente": 1,
+                  "observacoes": "obs",
+                  "itens": []
                 }
                 """;
 
@@ -110,25 +108,18 @@ class PedidoControllerTest {
     }
 
     @Test
-    void update_quandoExiste_deveRetornar200() throws Exception {
-        when(pedidoService.updatePedido(eq(1L), any())).thenReturn(response(1L));
+    void updateStatus_quandoExiste_deveRetornar200() throws Exception {
+        when(pedidoService.updateStatus(eq(1L), any())).thenReturn(response(1L, "PAGO"));
 
         String json = """
-                {
-                  "codigoCliente": 1,
-                  "codigoProduto": 2,
-                  "quantidade": 3,
-                  "valorUnitario": 10.00,
-                  "total": 30.00,
-                  "status": "PAGO"
-                }
+                { "status": "PAGO" }
                 """;
 
-        mockMvc.perform(put("/pedidos/{codigo}", 1L)
+        mockMvc.perform(patch("/pedidos/{codigo}/status", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.codigo").value(1));
+                .andExpect(jsonPath("$.status").value("PAGO"));
     }
 
     @Test

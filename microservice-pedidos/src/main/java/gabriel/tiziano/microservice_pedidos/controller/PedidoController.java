@@ -2,6 +2,7 @@ package gabriel.tiziano.microservice_pedidos.controller;
 
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -36,10 +37,10 @@ public class PedidoController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    @PutMapping("/{codigo}")
-    public ResponseEntity<PedidoResponse> update(@PathVariable Long codigo,
-                                                 @Valid @RequestBody PedidoRequest request) {
-        return ResponseEntity.ok(pedidoService.updatePedido(codigo, request));
+    @PatchMapping("/{codigo}/status")
+    public ResponseEntity<PedidoResponse> updateStatus(@PathVariable Long codigo,
+                                                       @Valid @RequestBody PedidoStatusRequest request) {
+        return ResponseEntity.ok(pedidoService.updateStatus(codigo, request));
     }
 
     @DeleteMapping("/{codigo}")

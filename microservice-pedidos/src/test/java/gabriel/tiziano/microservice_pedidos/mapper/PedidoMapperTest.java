@@ -1,72 +1,69 @@
 package gabriel.tiziano.microservice_pedidos.mapper;
 
+import gabriel.tiziano.microservice_pedidos.dto.PedidoItemRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class PedidoMapperTest {
 
     @Test
-    void toEntity_deveMapearTodosOsCampos() {
+    void toEntity_deveMapearPedidoComItensECalcularTotal() {
         PedidoRequest request = new PedidoRequest(
-                1L, 2L, 3,
-                new BigDecimal("10.00"), new BigDecimal("30.00"),
-                "REALIZADO");
+                1L,
+                "Entregar pela manhã",
+                List.of(
+                        new PedidoItemRequest(10L, 2, new BigDecimal("10.00")),
+                        new PedidoItemRequest(20L, 3, new BigDecimal("5.00"))
+                ));
 
         Pedido pedido = PedidoMapper.toEntity(request);
 
         assertThat(pedido.getCodigo()).isNull();
         assertThat(pedido.getCodigoCliente()).isEqualTo(1L);
-        assertThat(pedido.getCodigoProduto()).isEqualTo(2L);
-        assertThat(pedido.getQuantidade()).isEqualTo(3);
-        assertThat(pedido.getValorUnitario()).isEqualByComparingTo("10.00");
-        assertThat(pedido.getTotal()).isEqualByComparingTo("30.00");
+        assertThat(pedido.getObservacoes()).isEqualTo("Entregar pela manhã");
         assertThat(pedido.getStatus()).isEqualTo("REALIZADO");
+        assertThat(pedido.getDataPedido()).isNotNull();
+        assertThat(pedido.getTotal()).isEqualByComparingTo("35.00");
+        assertThat(pedido.getItens()).hasSize(2);
+        assertThat(pedido.getItens().get(0).getCodigoProduto()).isEqualTo(10L);
+        assertThat(pedido.getItens().get(0).getPedido()).isSameAs(pedido);
     }
 
     @Test
-    void toResponse_deveMapearTodosOsCampos() {
-        Pedido pedido = new Pedido(
-                99L, 1L, 2L, 3,
-                new BigDecimal("10.00"), new BigDecimal("30.00"),
-                "PAGO");
+    void toResponse_deveMapearPedidoComItens() {
+        Pedido pedido = new Pedido();
+        pedido.setCodigo(99L);
+        pedido.setCodigoCliente(1L);
+        pedido.setDataPedido(LocalDateTime.now());
+        pedido.setStatus("PAGO");
+        pedido.setTotal(new BigDecimal("35.00"));
+        pedido.setObservacoes("obs");
+
+        ItemPedido item = new ItemPedido();
+        item.setCodigo(500L);
+        item.setCodigoProduto(10L);
+        item.setQuantidade(2);
+        item.setValorUnitario(new BigDecimal("10.00"));
+        pedido.addItem(item);
 
         PedidoResponse response = PedidoMapper.toResponse(pedido);
 
         assertThat(response.codigo()).isEqualTo(99L);
         assertThat(response.codigoCliente()).isEqualTo(1L);
-        assertThat(response.codigoProduto()).isEqualTo(2L);
-        assertThat(response.quantidade()).isEqualTo(3);
-        assertThat(response.valorUnitario()).isEqualByComparingTo("10.00");
-        assertThat(response.total()).isEqualByComparingTo("30.00");
         assertThat(response.status()).isEqualTo("PAGO");
-    }
-
-    @Test
-    void updateEntity_deveAtualizarOsCamposMantendoOCodigo() {
-        Pedido pedido = new Pedido(
-                99L, 1L, 2L, 3,
-                new BigDecimal("10.00"), new BigDecimal("30.00"),
-                "REALIZADO");
-
-        PedidoRequest request = new PedidoRequest(
-                5L, 6L, 4,
-                new BigDecimal("15.00"), new BigDecimal("60.00"),
-                "PAGO");
-
-        PedidoMapper.updateEntity(pedido, request);
-
-        assertThat(pedido.getCodigo()).isEqualTo(99L);
-        assertThat(pedido.getCodigoCliente()).isEqualTo(5L);
-        assertThat(pedido.getCodigoProduto()).isEqualTo(6L);
-        assertThat(pedido.getQuantidade()).isEqualTo(4);
-        assertThat(pedido.getValorUnitario()).isEqualByComparingTo("15.00");
-        assertThat(pedido.getTotal()).isEqualByComparingTo("60.00");
-        assertThat(pedido.getStatus()).isEqualTo("PAGO");
+        assertThat(response.total()).isEqualByComparingTo("35.00");
+        assertThat(response.itens()).hasSize(1);
+        assertThat(response.itens().get(0).codigo()).isEqualTo(500L);
+        assertThat(response.itens().get(0).codigoProduto()).isEqualTo(10L);
+        assertThat(response.itens().get(0).quantidade()).isEqualTo(2);
     }
 }

@@ -7,6 +7,9 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "pedidos")
@@ -23,18 +26,32 @@ public class Pedido {
     @Column(name = "codigo_cliente", nullable = false)
     private Long codigoCliente;
 
-    @Column(name = "codigo_produto", nullable = false)
-    private Long codigoProduto;
+    @Column(name = "data_pedido", nullable = false)
+    private LocalDateTime dataPedido;
 
-    @Column(nullable = false)
-    private Integer quantidade;
-
-    @Column(name = "valor_unitario", nullable = false, precision = 16, scale = 2)
-    private BigDecimal valorUnitario;
+    @Column(nullable = false, length = 20)
+    private String status;
 
     @Column(nullable = false, precision = 16, scale = 2)
     private BigDecimal total;
 
-    @Column(nullable = false, length = 20)
-    private String status;
+    @Column(name = "chave_pagamento", columnDefinition = "TEXT")
+    private String chavePagamento;
+
+    @Column(columnDefinition = "TEXT")
+    private String observacoes;
+
+    @Column(name = "codigo_rastreio", length = 255)
+    private String codigoRastreio;
+
+    @Column(name = "url_nf", columnDefinition = "TEXT")
+    private String urlNf;
+
+    @OneToMany(mappedBy = "pedido", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ItemPedido> itens = new ArrayList<>();
+
+    public void addItem(ItemPedido item) {
+        itens.add(item);
+        item.setPedido(this);
+    }
 }

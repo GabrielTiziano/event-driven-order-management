@@ -1,7 +1,10 @@
 package gabriel.tiziano.microservice_pedidos.service;
 
+import gabriel.tiziano.microservice_pedidos.dto.PedidoItemRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
+import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
@@ -13,6 +16,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,40 +36,51 @@ class PedidoServiceTest {
     @InjectMocks
     private PedidoService pedidoService;
 
-    private Pedido novoPedido(Long codigo) {
-        return new Pedido(
-                codigo, 1L, 2L, 3,
-                new BigDecimal("10.00"), new BigDecimal("30.00"),
-                "REALIZADO");
+    private Pedido pedidoSalvo(Long codigo, String status) {
+        Pedido pedido = new Pedido();
+        pedido.setCodigo(codigo);
+        pedido.setCodigoCliente(1L);
+        pedido.setDataPedido(LocalDateTime.now());
+        pedido.setStatus(status);
+        pedido.setTotal(new BigDecimal("20.00"));
+
+        ItemPedido item = new ItemPedido();
+        item.setCodigo(500L);
+        item.setCodigoProduto(10L);
+        item.setQuantidade(2);
+        item.setValorUnitario(new BigDecimal("10.00"));
+        pedido.addItem(item);
+
+        return pedido;
     }
 
     private PedidoRequest novoRequest() {
         return new PedidoRequest(
-                1L, 2L, 3,
-                new BigDecimal("10.00"), new BigDecimal("30.00"),
-                "REALIZADO");
+                1L, "obs",
+                List.of(new PedidoItemRequest(10L, 2, new BigDecimal("10.00"))));
     }
 
     @Test
     void findAllPedidos_deveRetornarListaDeResponses() {
-        when(pedidoRepository.findAll()).thenReturn(List.of(novoPedido(1L), novoPedido(2L)));
+        when(pedidoRepository.findAll())
+                .thenReturn(List.of(pedidoSalvo(1L, "REALIZADO"), pedidoSalvo(2L, "PAGO")));
 
         List<PedidoResponse> responses = pedidoService.findAllPedidos();
 
         assertThat(responses).hasSize(2);
         assertThat(responses.get(0).codigo()).isEqualTo(1L);
-        assertThat(responses.get(1).codigo()).isEqualTo(2L);
+        assertThat(responses.get(1).status()).isEqualTo("PAGO");
         verify(pedidoRepository).findAll();
     }
 
     @Test
     void findPedidoById_quandoExiste_deveRetornarResponse() {
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(novoPedido(1L)));
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoSalvo(1L, "REALIZADO")));
 
         PedidoResponse response = pedidoService.findPedidoById(1L);
 
         assertThat(response.codigo()).isEqualTo(1L);
-        assertThat(response.status()).isEqualTo("REALIZADO");
+        assertThat(response.itens()).hasSize(1);
     }
 
     @Test
@@ -78,43 +93,39 @@ class PedidoServiceTest {
     }
 
     @Test
-    void createPedido_devePersistirERetornarResponse() {
-        PedidoRequest request = novoRequest();
-        when(pedidoRepository.save(any(Pedido.class))).thenReturn(novoPedido(10L));
+    void createPedido_devePersistirComStatusInicialERetornarResponse() {
+        when(pedidoRepository.save(any(Pedido.class))).thenReturn(pedidoSalvo(10L, "REALIZADO"));
 
-        PedidoResponse response = pedidoService.createPedido(request);
+        PedidoResponse response = pedidoService.createPedido(novoRequest());
 
         ArgumentCaptor<Pedido> captor = ArgumentCaptor.forClass(Pedido.class);
         verify(pedidoRepository).save(captor.capture());
-        assertThat(captor.getValue().getCodigo()).isNull();
-        assertThat(captor.getValue().getCodigoCliente()).isEqualTo(1L);
+        Pedido enviado = captor.getValue();
+
+        assertThat(enviado.getCodigo()).isNull();
+        assertThat(enviado.getStatus()).isEqualTo("REALIZADO");
+        assertThat(enviado.getItens()).hasSize(1);
         assertThat(response.codigo()).isEqualTo(10L);
     }
 
     @Test
-    void updatePedido_quandoExiste_deveAtualizarERetornarResponse() {
-        Pedido existente = novoPedido(1L);
-        PedidoRequest request = new PedidoRequest(
-                5L, 6L, 4,
-                new BigDecimal("15.00"), new BigDecimal("60.00"),
-                "PAGO");
-
+    void updateStatus_quandoExiste_deveAtualizarStatus() {
+        Pedido existente = pedidoSalvo(1L, "REALIZADO");
         when(pedidoRepository.findById(1L)).thenReturn(Optional.of(existente));
         when(pedidoRepository.save(any(Pedido.class))).thenReturn(existente);
 
-        PedidoResponse response = pedidoService.updatePedido(1L, request);
+        PedidoResponse response = pedidoService.updateStatus(1L, new PedidoStatusRequest("PAGO"));
 
-        assertThat(response.codigo()).isEqualTo(1L);
-        assertThat(response.codigoCliente()).isEqualTo(5L);
+        assertThat(existente.getStatus()).isEqualTo("PAGO");
         assertThat(response.status()).isEqualTo("PAGO");
         verify(pedidoRepository).save(existente);
     }
 
     @Test
-    void updatePedido_quandoNaoExiste_deveLancarExcecao() {
+    void updateStatus_quandoNaoExiste_deveLancarExcecao() {
         when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> pedidoService.updatePedido(99L, novoRequest()))
+        assertThatThrownBy(() -> pedidoService.updateStatus(99L, new PedidoStatusRequest("PAGO")))
                 .isInstanceOf(PedidoNotFoundException.class)
                 .hasMessageContaining("99");
 
