@@ -2,7 +2,9 @@ package gabriel.tiziano.microservice_pedidos.controller;
 
 import gabriel.tiziano.microservice_pedidos.dto.PedidoItemResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
+import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.service.PedidoService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,7 +35,7 @@ class PedidoControllerTest {
     @MockitoBean
     private PedidoService pedidoService;
 
-    private PedidoResponse response(Long codigo, String status) {
+    private PedidoResponse response(Long codigo, StatusPedido status) {
         return new PedidoResponse(
                 codigo, 1L, LocalDateTime.now(), status, new BigDecimal("35.00"),
                 null, "obs", null, null,
@@ -42,7 +44,7 @@ class PedidoControllerTest {
 
     @Test
     void findAll_deveRetornar200ComLista() throws Exception {
-        when(pedidoService.findAllPedidos()).thenReturn(List.of(response(1L, "REALIZADO")));
+        when(pedidoService.findAllPedidos()).thenReturn(List.of(response(1L, StatusPedido.REALIZADO)));
 
         mockMvc.perform(get("/pedidos"))
                 .andExpect(status().isOk())
@@ -52,7 +54,7 @@ class PedidoControllerTest {
 
     @Test
     void findById_quandoExiste_deveRetornar200() throws Exception {
-        when(pedidoService.findPedidoById(1L)).thenReturn(response(1L, "REALIZADO"));
+        when(pedidoService.findPedidoById(1L)).thenReturn(response(1L, StatusPedido.REALIZADO));
 
         mockMvc.perform(get("/pedidos/{codigo}", 1L))
                 .andExpect(status().isOk())
@@ -71,7 +73,7 @@ class PedidoControllerTest {
 
     @Test
     void create_comDadosValidos_deveRetornar201() throws Exception {
-        when(pedidoService.createPedido(any())).thenReturn(response(10L, "REALIZADO"));
+        when(pedidoService.createPedido(any())).thenReturn(response(10L, StatusPedido.REALIZADO));
 
         String json = """
                 {
@@ -108,8 +110,8 @@ class PedidoControllerTest {
     }
 
     @Test
-    void updateStatus_quandoExiste_deveRetornar200() throws Exception {
-        when(pedidoService.updateStatus(eq(1L), any())).thenReturn(response(1L, "PAGO"));
+    void updateStatus_comTransicaoValida_deveRetornar200() throws Exception {
+        when(pedidoService.updateStatus(eq(1L), any())).thenReturn(response(1L, StatusPedido.PAGO));
 
         String json = """
                 { "status": "PAGO" }
@@ -120,6 +122,35 @@ class PedidoControllerTest {
                         .content(json))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("PAGO"));
+    }
+
+    @Test
+    void updateStatus_comTransicaoInvalida_deveRetornar409() throws Exception {
+        when(pedidoService.updateStatus(eq(1L), any()))
+                .thenThrow(new TransicaoStatusInvalidaException(StatusPedido.REALIZADO, StatusPedido.ENVIADO));
+
+        String json = """
+                { "status": "ENVIADO" }
+                """;
+
+        mockMvc.perform(patch("/pedidos/{codigo}/status", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409));
+    }
+
+    @Test
+    void updateStatus_comStatusInexistente_deveRetornar400() throws Exception {
+        String json = """
+                { "status": "ABACAXI" }
+                """;
+
+        mockMvc.perform(patch("/pedidos/{codigo}/status", 1L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
     }
 
     @Test

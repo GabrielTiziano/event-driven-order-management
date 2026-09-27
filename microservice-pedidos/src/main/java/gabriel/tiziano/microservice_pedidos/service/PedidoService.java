@@ -4,7 +4,9 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
+import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import org.springframework.stereotype.Service;
@@ -43,7 +45,14 @@ public class PedidoService {
     @Transactional
     public PedidoResponse updateStatus(Long codigo, PedidoStatusRequest request) {
         Pedido pedido = buscarPedido(codigo);
-        pedido.setStatus(request.status());
+        StatusPedido atual = pedido.getStatus();
+        StatusPedido destino = request.status();
+
+        if (!atual.podeTransicionarPara(destino)) {
+            throw new TransicaoStatusInvalidaException(atual, destino);
+        }
+
+        pedido.setStatus(destino);
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 
