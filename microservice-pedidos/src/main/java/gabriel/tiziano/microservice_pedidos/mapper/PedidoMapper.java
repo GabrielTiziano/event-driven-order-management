@@ -6,6 +6,7 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -13,14 +14,12 @@ import java.util.List;
 
 public class PedidoMapper {
 
-    private static final String STATUS_INICIAL = "REALIZADO";
-
     public static Pedido toEntity(PedidoRequest request) {
         Pedido pedido = new Pedido();
         pedido.setCodigoCliente(request.codigoCliente());
         pedido.setObservacoes(request.observacoes());
         pedido.setDataPedido(LocalDateTime.now());
-        pedido.setStatus(STATUS_INICIAL);
+        pedido.setStatus(StatusPedido.REALIZADO);
 
         request.itens().forEach(itemRequest -> pedido.addItem(toItemEntity(itemRequest)));
         pedido.setTotal(calcularTotal(pedido));

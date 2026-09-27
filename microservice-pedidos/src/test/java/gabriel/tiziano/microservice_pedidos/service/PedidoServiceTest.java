@@ -6,7 +6,9 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
+import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +38,7 @@ class PedidoServiceTest {
     @InjectMocks
     private PedidoService pedidoService;
 
-    private Pedido pedidoSalvo(Long codigo, String status) {
+    private Pedido pedidoSalvo(Long codigo, StatusPedido status) {
         Pedido pedido = new Pedido();
         pedido.setCodigo(codigo);
         pedido.setCodigoCliente(1L);
@@ -63,19 +65,19 @@ class PedidoServiceTest {
     @Test
     void findAllPedidos_deveRetornarListaDeResponses() {
         when(pedidoRepository.findAll())
-                .thenReturn(List.of(pedidoSalvo(1L, "REALIZADO"), pedidoSalvo(2L, "PAGO")));
+                .thenReturn(List.of(pedidoSalvo(1L, StatusPedido.REALIZADO), pedidoSalvo(2L, StatusPedido.PAGO)));
 
         List<PedidoResponse> responses = pedidoService.findAllPedidos();
 
         assertThat(responses).hasSize(2);
         assertThat(responses.get(0).codigo()).isEqualTo(1L);
-        assertThat(responses.get(1).status()).isEqualTo("PAGO");
+        assertThat(responses.get(1).status()).isEqualTo(StatusPedido.PAGO);
         verify(pedidoRepository).findAll();
     }
 
     @Test
     void findPedidoById_quandoExiste_deveRetornarResponse() {
-        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoSalvo(1L, "REALIZADO")));
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedidoSalvo(1L, StatusPedido.REALIZADO)));
 
         PedidoResponse response = pedidoService.findPedidoById(1L);
 
@@ -94,7 +96,7 @@ class PedidoServiceTest {
 
     @Test
     void createPedido_devePersistirComStatusInicialERetornarResponse() {
-        when(pedidoRepository.save(any(Pedido.class))).thenReturn(pedidoSalvo(10L, "REALIZADO"));
+        when(pedidoRepository.save(any(Pedido.class))).thenReturn(pedidoSalvo(10L, StatusPedido.REALIZADO));
 
         PedidoResponse response = pedidoService.createPedido(novoRequest());
 
@@ -103,29 +105,56 @@ class PedidoServiceTest {
         Pedido enviado = captor.getValue();
 
         assertThat(enviado.getCodigo()).isNull();
-        assertThat(enviado.getStatus()).isEqualTo("REALIZADO");
+        assertThat(enviado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
         assertThat(enviado.getItens()).hasSize(1);
         assertThat(response.codigo()).isEqualTo(10L);
     }
 
     @Test
-    void updateStatus_quandoExiste_deveAtualizarStatus() {
-        Pedido existente = pedidoSalvo(1L, "REALIZADO");
+    void updateStatus_comTransicaoValida_deveAtualizarStatus() {
+        Pedido existente = pedidoSalvo(1L, StatusPedido.REALIZADO);
         when(pedidoRepository.findById(1L)).thenReturn(Optional.of(existente));
         when(pedidoRepository.save(any(Pedido.class))).thenReturn(existente);
 
-        PedidoResponse response = pedidoService.updateStatus(1L, new PedidoStatusRequest("PAGO"));
+        PedidoResponse response = pedidoService.updateStatus(1L, new PedidoStatusRequest(StatusPedido.PAGO));
 
-        assertThat(existente.getStatus()).isEqualTo("PAGO");
-        assertThat(response.status()).isEqualTo("PAGO");
+        assertThat(existente.getStatus()).isEqualTo(StatusPedido.PAGO);
+        assertThat(response.status()).isEqualTo(StatusPedido.PAGO);
         verify(pedidoRepository).save(existente);
+    }
+
+    @Test
+    void updateStatus_comRetentativaDePagamento_deveAtualizarStatus() {
+        Pedido existente = pedidoSalvo(1L, StatusPedido.ERRO_PAGAMENTO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(existente));
+        when(pedidoRepository.save(any(Pedido.class))).thenReturn(existente);
+
+        PedidoResponse response = pedidoService.updateStatus(1L, new PedidoStatusRequest(StatusPedido.PAGO));
+
+        assertThat(existente.getStatus()).isEqualTo(StatusPedido.PAGO);
+        assertThat(response.status()).isEqualTo(StatusPedido.PAGO);
+        verify(pedidoRepository).save(existente);
+    }
+
+    @Test
+    void updateStatus_comTransicaoInvalida_deveLancarExcecao() {
+        Pedido existente = pedidoSalvo(1L, StatusPedido.REALIZADO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(existente));
+
+        assertThatThrownBy(() -> pedidoService.updateStatus(1L, new PedidoStatusRequest(StatusPedido.ENVIADO)))
+                .isInstanceOf(TransicaoStatusInvalidaException.class)
+                .hasMessageContaining("REALIZADO")
+                .hasMessageContaining("ENVIADO");
+
+        assertThat(existente.getStatus()).isEqualTo(StatusPedido.REALIZADO);
+        verify(pedidoRepository, never()).save(any(Pedido.class));
     }
 
     @Test
     void updateStatus_quandoNaoExiste_deveLancarExcecao() {
         when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> pedidoService.updateStatus(99L, new PedidoStatusRequest("PAGO")))
+        assertThatThrownBy(() -> pedidoService.updateStatus(99L, new PedidoStatusRequest(StatusPedido.PAGO)))
                 .isInstanceOf(PedidoNotFoundException.class)
                 .hasMessageContaining("99");
 

@@ -5,6 +5,7 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -30,7 +31,7 @@ class PedidoMapperTest {
         assertThat(pedido.getCodigo()).isNull();
         assertThat(pedido.getCodigoCliente()).isEqualTo(1L);
         assertThat(pedido.getObservacoes()).isEqualTo("Entregar pela manhã");
-        assertThat(pedido.getStatus()).isEqualTo("REALIZADO");
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.REALIZADO);
         assertThat(pedido.getDataPedido()).isNotNull();
         assertThat(pedido.getTotal()).isEqualByComparingTo("35.00");
         assertThat(pedido.getItens()).hasSize(2);
@@ -44,7 +45,7 @@ class PedidoMapperTest {
         pedido.setCodigo(99L);
         pedido.setCodigoCliente(1L);
         pedido.setDataPedido(LocalDateTime.now());
-        pedido.setStatus("PAGO");
+        pedido.setStatus(StatusPedido.PAGO);
         pedido.setTotal(new BigDecimal("35.00"));
         pedido.setObservacoes("obs");
 
@@ -59,7 +60,7 @@ class PedidoMapperTest {
 
         assertThat(response.codigo()).isEqualTo(99L);
         assertThat(response.codigoCliente()).isEqualTo(1L);
-        assertThat(response.status()).isEqualTo("PAGO");
+        assertThat(response.status()).isEqualTo(StatusPedido.PAGO);
         assertThat(response.total()).isEqualByComparingTo("35.00");
         assertThat(response.itens()).hasSize(1);
         assertThat(response.itens().get(0).codigo()).isEqualTo(500L);

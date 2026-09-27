@@ -2,6 +2,7 @@ package gabriel.tiziano.microservice_pedidos;
 
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,11 +31,11 @@ class PedidoIntegrationTest {
     @Autowired
     private PedidoRepository pedidoRepository;
 
-    private Pedido persistirPedido() {
+    private Pedido persistirPedido(StatusPedido status) {
         Pedido pedido = new Pedido();
         pedido.setCodigoCliente(1L);
         pedido.setDataPedido(LocalDateTime.now());
-        pedido.setStatus("REALIZADO");
+        pedido.setStatus(status);
         pedido.setTotal(new BigDecimal("20.00"));
 
         ItemPedido item = new ItemPedido();
@@ -75,7 +76,7 @@ class PedidoIntegrationTest {
 
     @Test
     void findById_quandoExiste_deveRetornar200() throws Exception {
-        Pedido salvo = persistirPedido();
+        Pedido salvo = persistirPedido(StatusPedido.REALIZADO);
 
         mockMvc.perform(get("/pedidos/{codigo}", salvo.getCodigo()))
                 .andExpect(status().isOk())
@@ -90,8 +91,8 @@ class PedidoIntegrationTest {
     }
 
     @Test
-    void updateStatus_devePersistirNovoStatus() throws Exception {
-        Pedido salvo = persistirPedido();
+    void updateStatus_comTransicaoValida_devePersistirNovoStatus() throws Exception {
+        Pedido salvo = persistirPedido(StatusPedido.REALIZADO);
 
         String json = """
                 { "status": "PAGO" }
@@ -104,12 +105,47 @@ class PedidoIntegrationTest {
                 .andExpect(jsonPath("$.status").value("PAGO"));
 
         Pedido atualizado = pedidoRepository.findById(salvo.getCodigo()).orElseThrow();
-        assertThat(atualizado.getStatus()).isEqualTo("PAGO");
+        assertThat(atualizado.getStatus()).isEqualTo(StatusPedido.PAGO);
+    }
+
+    @Test
+    void updateStatus_comRetentativaDePagamento_devePersistirNovoStatus() throws Exception {
+        Pedido salvo = persistirPedido(StatusPedido.ERRO_PAGAMENTO);
+
+        String json = """
+                { "status": "PAGO" }
+                """;
+
+        mockMvc.perform(patch("/pedidos/{codigo}/status", salvo.getCodigo())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PAGO"));
+
+        Pedido atualizado = pedidoRepository.findById(salvo.getCodigo()).orElseThrow();
+        assertThat(atualizado.getStatus()).isEqualTo(StatusPedido.PAGO);
+    }
+
+    @Test
+    void updateStatus_comTransicaoInvalida_deveRetornar409() throws Exception {
+        Pedido salvo = persistirPedido(StatusPedido.REALIZADO);
+
+        String json = """
+                { "status": "ENVIADO" }
+                """;
+
+        mockMvc.perform(patch("/pedidos/{codigo}/status", salvo.getCodigo())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isConflict());
+
+        Pedido inalterado = pedidoRepository.findById(salvo.getCodigo()).orElseThrow();
+        assertThat(inalterado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
     }
 
     @Test
     void delete_deveRemoverPedidoEItens() throws Exception {
-        Pedido salvo = persistirPedido();
+        Pedido salvo = persistirPedido(StatusPedido.REALIZADO);
 
         mockMvc.perform(delete("/pedidos/{codigo}", salvo.getCodigo()))
                 .andExpect(status().isNoContent());
