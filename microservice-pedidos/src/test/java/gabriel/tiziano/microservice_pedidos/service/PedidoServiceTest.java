@@ -10,6 +10,7 @@ import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
+import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,15 +26,16 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoServiceTest {
 
     @Mock
     private PedidoRepository pedidoRepository;
+
+    @Mock
+    private PedidoValidator pedidoValidator;
 
     @InjectMocks
     private PedidoService pedidoService;
@@ -140,13 +142,12 @@ class PedidoServiceTest {
     void updateStatus_comTransicaoInvalida_deveLancarExcecao() {
         Pedido existente = pedidoSalvo(1L, StatusPedido.REALIZADO);
         when(pedidoRepository.findById(1L)).thenReturn(Optional.of(existente));
+        doThrow(new TransicaoStatusInvalidaException(StatusPedido.REALIZADO, StatusPedido.ENVIADO))
+                .when(pedidoValidator).validarTransicaoStatus(existente, StatusPedido.ENVIADO);
 
         assertThatThrownBy(() -> pedidoService.updateStatus(1L, new PedidoStatusRequest(StatusPedido.ENVIADO)))
-                .isInstanceOf(TransicaoStatusInvalidaException.class)
-                .hasMessageContaining("REALIZADO")
-                .hasMessageContaining("ENVIADO");
+                .isInstanceOf(TransicaoStatusInvalidaException.class);
 
-        assertThat(existente.getStatus()).isEqualTo(StatusPedido.REALIZADO);
         verify(pedidoRepository, never()).save(any(Pedido.class));
     }
 
