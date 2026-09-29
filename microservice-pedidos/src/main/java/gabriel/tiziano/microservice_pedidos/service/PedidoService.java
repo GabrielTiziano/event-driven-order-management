@@ -4,11 +4,10 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
-import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
-import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
+import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +17,11 @@ import java.util.List;
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
+    private final PedidoValidator pedidoValidator;
 
-    public PedidoService(PedidoRepository pedidoRepository) {
+    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator) {
         this.pedidoRepository = pedidoRepository;
+        this.pedidoValidator = pedidoValidator;
     }
 
     @Transactional(readOnly = true)
@@ -45,14 +46,8 @@ public class PedidoService {
     @Transactional
     public PedidoResponse updateStatus(Long codigo, PedidoStatusRequest request) {
         Pedido pedido = buscarPedido(codigo);
-        StatusPedido atual = pedido.getStatus();
-        StatusPedido destino = request.status();
-
-        if (!atual.podeTransicionarPara(destino)) {
-            throw new TransicaoStatusInvalidaException(atual, destino);
-        }
-
-        pedido.setStatus(destino);
+        pedidoValidator.validarTransicaoStatus(pedido, request.status());
+        pedido.setStatus(request.status());
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 
