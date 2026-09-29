@@ -39,6 +39,16 @@ public class Pedido {
     @Column(name = "chave_pagamento", columnDefinition = "TEXT")
     private String chavePagamento;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "metodo_pagamento", nullable = false, length = 20)
+    private MetodoPagamento metodoPagamento;
+
+    @Column
+    private Integer parcelas;
+
+    @Embedded
+    private Endereco enderecoEntrega;
+
     @Column(columnDefinition = "TEXT")
     private String observacoes;
 

@@ -5,6 +5,7 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
+import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
@@ -26,7 +27,10 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoServiceTest {
@@ -46,6 +50,7 @@ class PedidoServiceTest {
         pedido.setCodigoCliente(1L);
         pedido.setDataPedido(LocalDateTime.now());
         pedido.setStatus(status);
+        pedido.setMetodoPagamento(MetodoPagamento.PIX);
         pedido.setTotal(new BigDecimal("20.00"));
 
         ItemPedido item = new ItemPedido();
@@ -60,7 +65,7 @@ class PedidoServiceTest {
 
     private PedidoRequest novoRequest() {
         return new PedidoRequest(
-                1L, "obs",
+                1L, "obs", MetodoPagamento.PIX, null, null,
                 List.of(new PedidoItemRequest(10L, 2, new BigDecimal("10.00"))));
     }
 
