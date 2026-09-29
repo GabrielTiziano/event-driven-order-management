@@ -2,6 +2,7 @@ package gabriel.tiziano.microservice_pedidos.controller;
 
 import gabriel.tiziano.microservice_pedidos.dto.PedidoItemResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
@@ -37,8 +38,8 @@ class PedidoControllerTest {
 
     private PedidoResponse response(Long codigo, StatusPedido status) {
         return new PedidoResponse(
-                codigo, 1L, LocalDateTime.now(), status, new BigDecimal("35.00"),
-                null, "obs", null, null,
+                codigo, 1L, LocalDateTime.now(), status, MetodoPagamento.PIX, null,
+                new BigDecimal("35.00"), null, "obs", null, null, null,
                 List.of(new PedidoItemResponse(500L, 10L, 2, new BigDecimal("10.00"))));
     }
 
@@ -59,7 +60,8 @@ class PedidoControllerTest {
         mockMvc.perform(get("/pedidos/{codigo}", 1L))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.codigo").value(1))
-                .andExpect(jsonPath("$.status").value("REALIZADO"));
+                .andExpect(jsonPath("$.status").value("REALIZADO"))
+                .andExpect(jsonPath("$.metodoPagamento").value("PIX"));
     }
 
     @Test
@@ -79,6 +81,7 @@ class PedidoControllerTest {
                 {
                   "codigoCliente": 1,
                   "observacoes": "obs",
+                  "metodoPagamento": "PIX",
                   "itens": [
                     { "codigoProduto": 10, "quantidade": 2, "valorUnitario": 10.00 }
                   ]
@@ -98,7 +101,27 @@ class PedidoControllerTest {
                 {
                   "codigoCliente": 1,
                   "observacoes": "obs",
+                  "metodoPagamento": "PIX",
                   "itens": []
+                }
+                """;
+
+        mockMvc.perform(post("/pedidos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void create_semMetodoPagamento_deveRetornar400() throws Exception {
+        String json = """
+                {
+                  "codigoCliente": 1,
+                  "observacoes": "obs",
+                  "itens": [
+                    { "codigoProduto": 10, "quantidade": 2, "valorUnitario": 10.00 }
+                  ]
                 }
                 """;
 

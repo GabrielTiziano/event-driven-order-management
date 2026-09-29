@@ -1,9 +1,7 @@
 package gabriel.tiziano.microservice_pedidos.mapper;
 
-import gabriel.tiziano.microservice_pedidos.dto.PedidoItemRequest;
-import gabriel.tiziano.microservice_pedidos.dto.PedidoItemResponse;
-import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
-import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
+import gabriel.tiziano.microservice_pedidos.dto.*;
+import gabriel.tiziano.microservice_pedidos.entity.Endereco;
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
@@ -18,6 +16,9 @@ public class PedidoMapper {
         Pedido pedido = new Pedido();
         pedido.setCodigoCliente(request.codigoCliente());
         pedido.setObservacoes(request.observacoes());
+        pedido.setMetodoPagamento(request.metodoPagamento());
+        pedido.setParcelas(request.parcelas());
+        pedido.setEnderecoEntrega(toEndereco(request.enderecoEntrega()));
         pedido.setDataPedido(LocalDateTime.now());
         pedido.setStatus(StatusPedido.REALIZADO);
 
@@ -25,6 +26,18 @@ public class PedidoMapper {
         pedido.setTotal(calcularTotal(pedido));
 
         return pedido;
+    }
+
+    private static Endereco toEndereco(EnderecoRequest request) {
+        if (request == null) {
+            return null;
+        }
+        return new Endereco(
+                request.logradouro(),
+                request.numero(),
+                request.bairro(),
+                request.cidade(),
+                request.cep());
     }
 
     private static ItemPedido toItemEntity(PedidoItemRequest request) {
@@ -51,13 +64,27 @@ public class PedidoMapper {
                 pedido.getCodigoCliente(),
                 pedido.getDataPedido(),
                 pedido.getStatus(),
+                pedido.getMetodoPagamento(),
+                pedido.getParcelas(),
                 pedido.getTotal(),
                 pedido.getChavePagamento(),
                 pedido.getObservacoes(),
+                toEnderecoResponse(pedido.getEnderecoEntrega()),
                 pedido.getCodigoRastreio(),
                 pedido.getUrlNf(),
-                itens
-        );
+                itens);
+    }
+
+    private static EnderecoResponse toEnderecoResponse(Endereco endereco) {
+        if (endereco == null) {
+            return null;
+        }
+        return new EnderecoResponse(
+                endereco.getLogradouro(),
+                endereco.getNumero(),
+                endereco.getBairro(),
+                endereco.getCidade(),
+                endereco.getCep());
     }
 
     private static PedidoItemResponse toItemResponse(ItemPedido item) {
@@ -65,7 +92,6 @@ public class PedidoMapper {
                 item.getCodigo(),
                 item.getCodigoProduto(),
                 item.getQuantidade(),
-                item.getValorUnitario()
-        );
+                item.getValorUnitario());
     }
 }

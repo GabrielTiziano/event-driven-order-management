@@ -1,6 +1,7 @@
 package gabriel.tiziano.microservice_pedidos;
 
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
+import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
@@ -36,6 +37,7 @@ class PedidoIntegrationTest {
         pedido.setCodigoCliente(1L);
         pedido.setDataPedido(LocalDateTime.now());
         pedido.setStatus(status);
+        pedido.setMetodoPagamento(MetodoPagamento.PIX);
         pedido.setTotal(new BigDecimal("20.00"));
 
         ItemPedido item = new ItemPedido();
@@ -53,6 +55,15 @@ class PedidoIntegrationTest {
                 {
                   "codigoCliente": 1,
                   "observacoes": "obs",
+                  "metodoPagamento": "CREDITO",
+                  "parcelas": 3,
+                  "enderecoEntrega": {
+                    "logradouro": "Rua A",
+                    "numero": "100",
+                    "bairro": "Centro",
+                    "cidade": "Curitiba",
+                    "cep": "80000000"
+                  },
                   "itens": [
                     { "codigoProduto": 10, "quantidade": 2, "valorUnitario": 10.00 },
                     { "codigoProduto": 20, "quantidade": 3, "valorUnitario": 5.00 }
@@ -66,12 +77,15 @@ class PedidoIntegrationTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.codigo").isNotEmpty())
                 .andExpect(jsonPath("$.status").value("REALIZADO"))
+                .andExpect(jsonPath("$.metodoPagamento").value("CREDITO"))
                 .andExpect(jsonPath("$.itens.length()").value(2));
 
         List<Pedido> pedidos = pedidoRepository.findAll();
         assertThat(pedidos).hasSize(1);
         assertThat(pedidos.get(0).getTotal()).isEqualByComparingTo("35.00");
-        assertThat(pedidos.get(0).getItens()).hasSize(2);
+        assertThat(pedidos.get(0).getMetodoPagamento()).isEqualTo(MetodoPagamento.CREDITO);
+        assertThat(pedidos.get(0).getParcelas()).isEqualTo(3);
+        assertThat(pedidos.get(0).getEnderecoEntrega().getCidade()).isEqualTo("Curitiba");
     }
 
     @Test
