@@ -44,8 +44,7 @@ public class PedidoService {
     public PedidoResponse createPedido(PedidoRequest request) {
         Pedido pedido = PedidoMapper.toEntity(request);
         pedidoValidator.validarPagamento(pedido);
-        String chave = servicoBancarioClient.solicitarPagamento(pedido);
-        pedido.setChavePagamento(chave);
+        enviarSolicitacaoPagamento(pedido);
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 
@@ -63,6 +62,11 @@ public class PedidoService {
             throw new PedidoNotFoundException(codigo);
         }
         pedidoRepository.deleteById(codigo);
+    }
+
+    private void enviarSolicitacaoPagamento(Pedido pedido) {
+        String chavePagamento = servicoBancarioClient.solicitarPagamento(pedido);
+        pedido.setChavePagamento(chavePagamento);
     }
 
     private Pedido buscarPedido(Long codigo) {
