@@ -40,6 +40,7 @@ public class PedidoService {
     @Transactional
     public PedidoResponse createPedido(PedidoRequest request) {
         Pedido pedido = PedidoMapper.toEntity(request);
+        pedidoValidator.validarPagamento(pedido);
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 

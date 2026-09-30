@@ -166,4 +166,25 @@ class PedidoIntegrationTest {
 
         assertThat(pedidoRepository.findById(salvo.getCodigo())).isEmpty();
     }
+
+    @Test
+    void create_creditoSemParcelas_deveRetornar422() throws Exception {
+        String json = """
+                {
+                  "codigoCliente": 1,
+                  "observacoes": "obs",
+                  "metodoPagamento": "CREDITO",
+                  "itens": [
+                    { "codigoProduto": 10, "quantidade": 2, "valorUnitario": 10.00 }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(post("/pedidos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnprocessableEntity());
+
+        assertThat(pedidoRepository.findAll()).isEmpty();
+    }
 }
