@@ -1,5 +1,6 @@
 package gabriel.tiziano.microservice_pedidos.service;
 
+import gabriel.tiziano.microservice_pedidos.client.ServicoBancarioClient;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoItemRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
@@ -41,6 +42,9 @@ class PedidoServiceTest {
 
     @Mock
     private PedidoValidator pedidoValidator;
+
+    @Mock
+    private ServicoBancarioClient servicoBancarioClient;
 
     @InjectMocks
     private PedidoService pedidoService;
@@ -104,6 +108,7 @@ class PedidoServiceTest {
 
     @Test
     void createPedido_devePersistirComStatusInicialERetornarResponse() {
+        when(servicoBancarioClient.solicitarPagamento(any(Pedido.class))).thenReturn("chave-pagamento-123");
         when(pedidoRepository.save(any(Pedido.class))).thenReturn(pedidoSalvo(10L, StatusPedido.REALIZADO));
 
         PedidoResponse response = pedidoService.createPedido(novoRequest());
@@ -114,6 +119,7 @@ class PedidoServiceTest {
 
         assertThat(enviado.getCodigo()).isNull();
         assertThat(enviado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
+        assertThat(enviado.getChavePagamento()).isEqualTo("chave-pagamento-123");
         assertThat(enviado.getItens()).hasSize(1);
         assertThat(response.codigo()).isEqualTo(10L);
     }
@@ -197,5 +203,6 @@ class PedidoServiceTest {
                 .isInstanceOf(PagamentoInvalidoException.class);
 
         verify(pedidoRepository, never()).save(any(Pedido.class));
+        verify(servicoBancarioClient, never()).solicitarPagamento(any(Pedido.class));
     }
 }
