@@ -1,5 +1,6 @@
 package gabriel.tiziano.microservice_pedidos.service;
 
+import gabriel.tiziano.microservice_pedidos.client.ServicoBancarioClient;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
@@ -18,10 +19,12 @@ public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
     private final PedidoValidator pedidoValidator;
+    private final ServicoBancarioClient servicoBancarioClient;
 
-    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator) {
+    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator, ServicoBancarioClient servicoBancarioClient) {
         this.pedidoRepository = pedidoRepository;
         this.pedidoValidator = pedidoValidator;
+        this.servicoBancarioClient = servicoBancarioClient;
     }
 
     @Transactional(readOnly = true)
@@ -41,6 +44,8 @@ public class PedidoService {
     public PedidoResponse createPedido(PedidoRequest request) {
         Pedido pedido = PedidoMapper.toEntity(request);
         pedidoValidator.validarPagamento(pedido);
+        String chave = servicoBancarioClient.solicitarPagamento(pedido);
+        pedido.setChavePagamento(chave);
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 

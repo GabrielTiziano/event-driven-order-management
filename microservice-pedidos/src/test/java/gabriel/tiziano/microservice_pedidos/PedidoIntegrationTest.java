@@ -86,6 +86,7 @@ class PedidoIntegrationTest {
         assertThat(pedidos.get(0).getMetodoPagamento()).isEqualTo(MetodoPagamento.CREDITO);
         assertThat(pedidos.get(0).getParcelas()).isEqualTo(3);
         assertThat(pedidos.get(0).getEnderecoEntrega().getCidade()).isEqualTo("Curitiba");
+        assertThat(pedidos.get(0).getChavePagamento()).isNotBlank();
     }
 
     @Test
