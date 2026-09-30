@@ -4,6 +4,7 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoItemResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
+import gabriel.tiziano.microservice_pedidos.exception.PagamentoInvalidoException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.service.PedidoService;
@@ -192,5 +193,29 @@ class PedidoControllerTest {
 
         mockMvc.perform(delete("/pedidos/{codigo}", 99L))
                 .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void create_comPagamentoInvalido_deveRetornar422() throws Exception {
+        when(pedidoService.createPedido(any()))
+                .thenThrow(new PagamentoInvalidoException(
+                        "Pagamento no crédito exige o número de parcelas (mínimo 1)"));
+
+        String json = """
+                {
+                  "codigoCliente": 1,
+                  "observacoes": "obs",
+                  "metodoPagamento": "CREDITO",
+                  "itens": [
+                    { "codigoProduto": 10, "quantidade": 2, "valorUnitario": 10.00 }
+                  ]
+                }
+                """;
+
+        mockMvc.perform(post("/pedidos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(json))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.status").value(422));
     }
 }

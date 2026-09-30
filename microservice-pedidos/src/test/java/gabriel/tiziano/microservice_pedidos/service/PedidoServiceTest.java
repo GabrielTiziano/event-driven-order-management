@@ -8,6 +8,7 @@ import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
+import gabriel.tiziano.microservice_pedidos.exception.PagamentoInvalidoException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
@@ -185,5 +186,16 @@ class PedidoServiceTest {
                 .hasMessageContaining("99");
 
         verify(pedidoRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void createPedido_comPagamentoInvalido_deveLancarExcecao() {
+        doThrow(new PagamentoInvalidoException("pagamento inválido"))
+                .when(pedidoValidator).validarPagamento(any(Pedido.class));
+
+        assertThatThrownBy(() -> pedidoService.createPedido(novoRequest()))
+                .isInstanceOf(PagamentoInvalidoException.class);
+
+        verify(pedidoRepository, never()).save(any(Pedido.class));
     }
 }
