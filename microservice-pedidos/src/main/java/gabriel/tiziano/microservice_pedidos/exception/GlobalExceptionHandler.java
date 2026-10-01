@@ -1,5 +1,6 @@
 package gabriel.tiziano.microservice_pedidos.exception;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -12,18 +13,19 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(PedidoNotFoundException.class)
-    public ResponseEntity<ApiError> handlePedidoNotFound(PedidoNotFoundException ex) {
+    @ExceptionHandler(RegraNegocioException.class)
+    public ResponseEntity<ApiError> handleRegraNegocio(RegraNegocioException ex) {
         ApiError apiError = new ApiError(
                 Instant.now(),
-                HttpStatus.NOT_FOUND.value(),
-                HttpStatus.NOT_FOUND.getReasonPhrase(),
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
                 ex.getMessage(),
                 null
         );
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(apiError);
+        return ResponseEntity.status(ex.getStatus()).body(apiError);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -42,39 +44,28 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
     }
 
-    @ExceptionHandler(TransicaoStatusInvalidaException.class)
-    public ResponseEntity<ApiError> handleTransicaoInvalida(TransicaoStatusInvalidaException ex) {
-        ApiError apiError = new ApiError(
-                Instant.now(),
-                HttpStatus.CONFLICT.value(),
-                HttpStatus.CONFLICT.getReasonPhrase(),
-                ex.getMessage(),
-                null
-        );
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(apiError);
-    }
-
-    @ExceptionHandler(PagamentoInvalidoException.class)
-    public ResponseEntity<ApiError> handlePagamentoInvalido(PagamentoInvalidoException ex) {
-        ApiError apiError = new ApiError(
-                Instant.now(),
-                HttpStatus.UNPROCESSABLE_ENTITY.value(),
-                HttpStatus.UNPROCESSABLE_ENTITY.getReasonPhrase(),
-                ex.getMessage(),
-                null
-        );
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(apiError);
-    }
-
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleNotReadable(HttpMessageNotReadableException ex) {
         ApiError apiError = new ApiError(
                 Instant.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 HttpStatus.BAD_REQUEST.getReasonPhrase(),
-                "Requisição malformada ou valor de status inválido",
+                "Requisição malformada ou valor inválido",
                 null
         );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(apiError);
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleUnexpected(Exception ex) {
+        log.error("Erro inesperado", ex);
+        ApiError apiError = new ApiError(
+                Instant.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(),
+                "Erro interno inesperado",
+                null
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(apiError);
     }
 }
