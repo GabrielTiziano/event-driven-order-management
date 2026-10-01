@@ -12,3 +12,9 @@ spring:
       ddl-auto: validate
 server:
   port: 8083
+
+order-management-microservices:
+  microservice-produtos:
+    url: http://localhost:8084
+  microservice-clientes:
+    url: http://localhost:8082

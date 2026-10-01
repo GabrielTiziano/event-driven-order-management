@@ -1,7 +1,9 @@
 package gabriel.tiziano.microservice_pedidos.exception;
 
-public class PagamentoInvalidoException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public class PagamentoInvalidoException extends RegraNegocioException {
     public PagamentoInvalidoException(String message) {
-        super(message);
+        super(message, HttpStatus.UNPROCESSABLE_ENTITY);
     }
 }

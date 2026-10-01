@@ -1,8 +1,9 @@
 package gabriel.tiziano.microservice_pedidos.exception;
 
-public class PedidoNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
 
+public class PedidoNotFoundException extends RegraNegocioException {
     public PedidoNotFoundException(Long codigo) {
-        super("Pedido de código " + codigo + "não encontrado.");
+        super("Pedido não encontrado com o código: " + codigo, HttpStatus.NOT_FOUND);
     }
 }
