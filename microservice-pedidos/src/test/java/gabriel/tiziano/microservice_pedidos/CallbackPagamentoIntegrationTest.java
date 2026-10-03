@@ -67,8 +67,10 @@ class CallbackPagamentoIntegrationTest {
     }
 
     @Test
-    void callback_aprovado_deveMarcarComoPago() throws Exception {
+    void callback_aprovado_deveMarcarComoPagoEPreservarObservacao() throws Exception {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
+        pedido.setObservacoes("entregar na portaria");
+        pedidoRepository.save(pedido);
 
         mockMvc.perform(post("/webhooks/pagamentos")
                         .header("X-API-Key", API_KEY)
@@ -79,11 +81,12 @@ class CallbackPagamentoIntegrationTest {
 
         Pedido atualizado = pedidoRepository.findById(pedido.getCodigo()).orElseThrow();
         assertThat(atualizado.getStatus()).isEqualTo(StatusPedido.PAGO);
+        assertThat(atualizado.getObservacoes()).isEqualTo("entregar na portaria");
         assertThat(callbackProcessadoRepository.existsById("idem-1")).isTrue();
     }
 
     @Test
-    void callback_recusado_deveMarcarComoErroPagamento() throws Exception {
+    void callback_recusado_deveMarcarComoErroEGravarObservacaoDoPsp() throws Exception {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
 
         mockMvc.perform(post("/webhooks/pagamentos")
@@ -95,6 +98,7 @@ class CallbackPagamentoIntegrationTest {
 
         Pedido atualizado = pedidoRepository.findById(pedido.getCodigo()).orElseThrow();
         assertThat(atualizado.getStatus()).isEqualTo(StatusPedido.ERRO_PAGAMENTO);
+        assertThat(atualizado.getObservacoes()).isEqualTo("teste");
     }
 
     @Test
@@ -140,7 +144,7 @@ class CallbackPagamentoIntegrationTest {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
 
         mockMvc.perform(post("/webhooks/pagamentos")
-                        .header("X-API-Key", "chave-errada")
+                        .header("X-API-Key", "chave-invalida")
                         .header("Idempotency-Key", "idem-5")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(callbackJson(pedido.getCodigo(), "chave-123", true)))

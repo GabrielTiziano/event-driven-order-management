@@ -38,7 +38,7 @@ class CallbackPagamentoServiceTest {
         callbackPagamentoService.process("idem-1", callback());
 
         verify(callbackProcessadoRepository).save(any(CallbackProcessado.class));
-        verify(pedidoService).confirmPayment(1L, "chave-123", true);
+        verify(pedidoService).confirmPayment(1L, "chave-123", true, "ok");
     }
 
     @Test
@@ -48,6 +48,6 @@ class CallbackPagamentoServiceTest {
         callbackPagamentoService.process("idem-1", callback());
 
         verify(callbackProcessadoRepository, never()).save(any(CallbackProcessado.class));
-        verify(pedidoService, never()).confirmPayment(any(), any(), anyBoolean());
+        verify(pedidoService, never()).confirmPayment(any(), any(), anyBoolean(), any());
     }
 }
