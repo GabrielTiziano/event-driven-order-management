@@ -60,13 +60,17 @@ public class PedidoService {
     }
 
     @Transactional
-    public void confirmPayment(Long codigo, String chavePagamento, boolean aprovado) {
+    public void confirmPayment(Long codigo, String chavePagamento, boolean aprovado, String observacoes) {
         Pedido pedido = pedidoRepository.findByCodigoAndChavePagamento(codigo, chavePagamento)
                 .orElseThrow(() -> new PedidoNotFoundException(codigo));
 
         StatusPedido novoStatus = aprovado ? StatusPedido.PAGO : StatusPedido.ERRO_PAGAMENTO;
         pedidoValidator.validarTransicaoStatus(pedido, novoStatus);
+
         pedido.setStatus(novoStatus);
+        if (!aprovado) {
+            pedido.setObservacoes(observacoes);
+        }
         pedidoRepository.save(pedido);
     }
 

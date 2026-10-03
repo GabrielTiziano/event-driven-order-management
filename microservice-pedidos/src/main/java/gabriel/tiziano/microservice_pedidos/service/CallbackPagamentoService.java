@@ -24,6 +24,6 @@ public class CallbackPagamentoService {
             return;
         }
         callbackProcessadoRepository.save(new CallbackProcessado(idempotencyKey, LocalDateTime.now()));
-        pedidoService.confirmPayment(callbackPagamento.codigo(), callbackPagamento.chavePagamento(), callbackPagamento.aprovado());
+        pedidoService.confirmPayment(callbackPagamento.codigo(), callbackPagamento.chavePagamento(), callbackPagamento.aprovado(), callbackPagamento.observacoes());
     }
 }
