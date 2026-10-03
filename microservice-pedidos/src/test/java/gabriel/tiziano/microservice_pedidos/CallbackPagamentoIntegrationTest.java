@@ -121,7 +121,7 @@ class CallbackPagamentoIntegrationTest {
     }
 
     @Test
-    void callback_comChavePagamentoInvalida_deveRetornar422() throws Exception {
+    void callback_comIdOuChaveInvalida_deveRetornar404() throws Exception {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
 
         mockMvc.perform(post("/webhooks/pagamentos")
@@ -129,7 +129,7 @@ class CallbackPagamentoIntegrationTest {
                         .header("Idempotency-Key", "idem-4")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(callbackJson(pedido.getCodigo(), "chave-errada", true)))
-                .andExpect(status().isUnprocessableEntity());
+                .andExpect(status().isNotFound());
 
         Pedido inalterado = pedidoRepository.findById(pedido.getCodigo()).orElseThrow();
         assertThat(inalterado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
