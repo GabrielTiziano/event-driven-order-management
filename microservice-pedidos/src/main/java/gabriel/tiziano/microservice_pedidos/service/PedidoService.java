@@ -61,10 +61,9 @@ public class PedidoService {
 
     @Transactional
     public void confirmPayment(Long codigo, String chavePagamento, boolean aprovado) {
-        Pedido pedido = getPedido(codigo);
-        if(!Objects.equals(pedido.getChavePagamento(), chavePagamento)) {
-            throw new PagamentoInvalidoException("Chave de pagamento inválida para o pedido " + codigo);
-        }
+        Pedido pedido = pedidoRepository.findByCodigoAndChavePagamento(codigo, chavePagamento)
+                .orElseThrow(() -> new PedidoNotFoundException(codigo));
+
         StatusPedido novoStatus = aprovado ? StatusPedido.PAGO : StatusPedido.ERRO_PAGAMENTO;
         pedidoValidator.validarTransicaoStatus(pedido, novoStatus);
         pedido.setStatus(novoStatus);
