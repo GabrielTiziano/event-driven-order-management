@@ -18,3 +18,7 @@ order-management-microservices:
     url: http://localhost:8084
   microservice-clientes:
     url: http://localhost:8082
+
+webhook:
+  payments:
+    api-key: ${WEBHOOK_PAYMENTS_API_KEY:chave-secreta-local}

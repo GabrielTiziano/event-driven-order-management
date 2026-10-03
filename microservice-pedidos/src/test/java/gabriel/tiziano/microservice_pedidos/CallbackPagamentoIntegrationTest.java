@@ -26,6 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class CallbackPagamentoIntegrationTest {
 
+    private static final String API_KEY = "chave-secreta-local";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -69,6 +71,7 @@ class CallbackPagamentoIntegrationTest {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
 
         mockMvc.perform(post("/webhooks/pagamentos")
+                        .header("X-API-Key", API_KEY)
                         .header("Idempotency-Key", "idem-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(callbackJson(pedido.getCodigo(), "chave-123", true)))
@@ -84,6 +87,7 @@ class CallbackPagamentoIntegrationTest {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
 
         mockMvc.perform(post("/webhooks/pagamentos")
+                        .header("X-API-Key", API_KEY)
                         .header("Idempotency-Key", "idem-2")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(callbackJson(pedido.getCodigo(), "chave-123", false)))
@@ -99,12 +103,14 @@ class CallbackPagamentoIntegrationTest {
         String json = callbackJson(pedido.getCodigo(), "chave-123", true);
 
         mockMvc.perform(post("/webhooks/pagamentos")
+                        .header("X-API-Key", API_KEY)
                         .header("Idempotency-Key", "idem-3")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
                 .andExpect(status().isOk());
 
         mockMvc.perform(post("/webhooks/pagamentos")
+                        .header("X-API-Key", API_KEY)
                         .header("Idempotency-Key", "idem-3")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(json))
@@ -119,10 +125,26 @@ class CallbackPagamentoIntegrationTest {
         Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
 
         mockMvc.perform(post("/webhooks/pagamentos")
+                        .header("X-API-Key", API_KEY)
                         .header("Idempotency-Key", "idem-4")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(callbackJson(pedido.getCodigo(), "chave-errada", true)))
                 .andExpect(status().isUnprocessableEntity());
+
+        Pedido inalterado = pedidoRepository.findById(pedido.getCodigo()).orElseThrow();
+        assertThat(inalterado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
+    }
+
+    @Test
+    void callback_comApiKeyInvalida_deveRetornar401() throws Exception {
+        Pedido pedido = persistirPedido("chave-123", StatusPedido.REALIZADO);
+
+        mockMvc.perform(post("/webhooks/pagamentos")
+                        .header("X-API-Key", "chave-errada")
+                        .header("Idempotency-Key", "idem-5")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(callbackJson(pedido.getCodigo(), "chave-123", true)))
+                .andExpect(status().isUnauthorized());
 
         Pedido inalterado = pedidoRepository.findById(pedido.getCodigo()).orElseThrow();
         assertThat(inalterado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
