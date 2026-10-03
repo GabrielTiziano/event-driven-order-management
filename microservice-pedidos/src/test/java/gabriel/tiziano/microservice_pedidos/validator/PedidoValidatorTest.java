@@ -1,5 +1,7 @@
 package gabriel.tiziano.microservice_pedidos.validator;
 
+import gabriel.tiziano.microservice_pedidos.client.ClientesClient;
+import gabriel.tiziano.microservice_pedidos.client.ProdutosClient;
 import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
@@ -9,10 +11,13 @@ import org.junit.jupiter.api.Test;
 
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 class PedidoValidatorTest {
 
-    private final PedidoValidator validator = new PedidoValidator();
+    private final ClientesClient clientesClient = mock(ClientesClient.class);
+    private final ProdutosClient produtosClient = mock(ProdutosClient.class);
+    private final PedidoValidator validator = new PedidoValidator(clientesClient, produtosClient);
 
     private Pedido pedidoComStatus(StatusPedido status) {
         Pedido pedido = new Pedido();
