@@ -5,6 +5,8 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
+import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
+import gabriel.tiziano.microservice_pedidos.exception.PagamentoInvalidoException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class PedidoService {
@@ -37,23 +40,35 @@ public class PedidoService {
 
     @Transactional(readOnly = true)
     public PedidoResponse findPedidoById(Long codigo) {
-        return PedidoMapper.toResponse(buscarPedido(codigo));
+        return PedidoMapper.toResponse(getPedido(codigo));
     }
 
     @Transactional
     public PedidoResponse createPedido(PedidoRequest request) {
         Pedido pedido = PedidoMapper.toEntity(request);
         pedidoValidator.validarPagamento(pedido);
-        enviarSolicitacaoPagamento(pedido);
+        requestPayment(pedido);
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
 
     @Transactional
     public PedidoResponse updateStatus(Long codigo, PedidoStatusRequest request) {
-        Pedido pedido = buscarPedido(codigo);
+        Pedido pedido = getPedido(codigo);
         pedidoValidator.validarTransicaoStatus(pedido, request.status());
         pedido.setStatus(request.status());
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
+    }
+
+    @Transactional
+    public void confirmPayment(Long codigo, String chavePagamento, boolean aprovado) {
+        Pedido pedido = getPedido(codigo);
+        if(!Objects.equals(pedido.getChavePagamento(), chavePagamento)) {
+            throw new PagamentoInvalidoException("Chave de pagamento inválida para o pedido " + codigo);
+        }
+        StatusPedido novoStatus = aprovado ? StatusPedido.PAGO : StatusPedido.ERRO_PAGAMENTO;
+        pedidoValidator.validarTransicaoStatus(pedido, novoStatus);
+        pedido.setStatus(novoStatus);
+        pedidoRepository.save(pedido);
     }
 
     @Transactional
@@ -64,12 +79,12 @@ public class PedidoService {
         pedidoRepository.deleteById(codigo);
     }
 
-    private void enviarSolicitacaoPagamento(Pedido pedido) {
+    private void requestPayment(Pedido pedido) {
         String chavePagamento = servicoBancarioClient.solicitarPagamento(pedido);
         pedido.setChavePagamento(chavePagamento);
     }
 
-    private Pedido buscarPedido(Long codigo) {
+    private Pedido getPedido(Long codigo) {
         return pedidoRepository.findById(codigo)
                 .orElseThrow(() -> new PedidoNotFoundException(codigo));
     }
