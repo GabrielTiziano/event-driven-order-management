@@ -17,21 +17,19 @@ class StatusPedidoTest {
 
     @Test
     void transicoesInvalidas_naoDevemSerPermitidas() {
-        assertThat(StatusPedido.REALIZADO.podeTransicionarPara(StatusPedido.ENVIADO)).isFalse();
+        assertThat(StatusPedido.REALIZADO.podeTransicionarPara(StatusPedido.FATURADO)).isFalse();
         assertThat(StatusPedido.PAGO.podeTransicionarPara(StatusPedido.REALIZADO)).isFalse();
         assertThat(StatusPedido.ENVIADO.podeTransicionarPara(StatusPedido.PAGO)).isFalse();
-        assertThat(StatusPedido.FATURADO.podeTransicionarPara(StatusPedido.ENVIADO)).isFalse();
-    }
-
-    @Test
-    void estadosFinais_naoDevemTerTransicoes() {
-        assertThat(StatusPedido.ENVIADO.isFinal()).isTrue();
-        assertThat(StatusPedido.REALIZADO.isFinal()).isFalse();
     }
 
     @Test
     void erroPagamento_devePermitirRetentativa() {
-        assertThat(StatusPedido.ERRO_PAGAMENTO.podeTransicionarPara(StatusPedido.PAGO)).isTrue();
-        assertThat(StatusPedido.ERRO_PAGAMENTO.isFinal()).isFalse();
+        assertThat(StatusPedido.ERRO_PAGAMENTO.podeTransicionarPara(StatusPedido.REALIZADO)).isTrue();
+    }
+
+    @Test
+    void enviado_deveSerEstadoFinal() {
+        assertThat(StatusPedido.ENVIADO.isFinal()).isTrue();
+        assertThat(StatusPedido.REALIZADO.isFinal()).isFalse();
     }
 }

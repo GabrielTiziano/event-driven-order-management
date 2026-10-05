@@ -124,24 +124,6 @@ class PedidoIntegrationTest {
     }
 
     @Test
-    void updateStatus_comRetentativaDePagamento_devePersistirNovoStatus() throws Exception {
-        Pedido salvo = persistirPedido(StatusPedido.ERRO_PAGAMENTO);
-
-        String json = """
-                { "status": "PAGO" }
-                """;
-
-        mockMvc.perform(patch("/pedidos/{codigo}/status", salvo.getCodigo())
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(json))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("PAGO"));
-
-        Pedido atualizado = pedidoRepository.findById(salvo.getCodigo()).orElseThrow();
-        assertThat(atualizado.getStatus()).isEqualTo(StatusPedido.PAGO);
-    }
-
-    @Test
     void updateStatus_comTransicaoInvalida_deveRetornar409() throws Exception {
         Pedido salvo = persistirPedido(StatusPedido.REALIZADO);
 

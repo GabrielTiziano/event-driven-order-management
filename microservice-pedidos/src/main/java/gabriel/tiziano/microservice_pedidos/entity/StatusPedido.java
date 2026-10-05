@@ -22,14 +22,14 @@ public enum StatusPedido {
         TRANSICOES.put(FATURADO, EnumSet.of(PREPARANDO_ENVIO));
         TRANSICOES.put(PREPARANDO_ENVIO, EnumSet.of(ENVIADO));
         TRANSICOES.put(ENVIADO, EnumSet.noneOf(StatusPedido.class));
-        TRANSICOES.put(ERRO_PAGAMENTO, EnumSet.of(PAGO));
+        TRANSICOES.put(ERRO_PAGAMENTO, EnumSet.of(REALIZADO));
     }
 
     public boolean podeTransicionarPara(StatusPedido destino) {
-        return TRANSICOES.get(this).contains(destino);
+        return TRANSICOES.getOrDefault(this, EnumSet.noneOf(StatusPedido.class)).contains(destino);
     }
 
     public boolean isFinal() {
-        return TRANSICOES.get(this).isEmpty();
+        return TRANSICOES.getOrDefault(this, EnumSet.noneOf(StatusPedido.class)).isEmpty();
     }
 }

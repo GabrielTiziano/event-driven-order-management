@@ -44,7 +44,7 @@ class PedidoValidatorTest {
     @Test
     void retentativaDePagamento_naoDeveLancar() {
         Pedido pedido = pedidoComStatus(StatusPedido.ERRO_PAGAMENTO);
-        assertThatCode(() -> validator.validarTransicaoStatus(pedido, StatusPedido.PAGO))
+        assertThatCode(() -> validator.validarTransicaoStatus(pedido, StatusPedido.REALIZADO))
                 .doesNotThrowAnyException();
     }
 
