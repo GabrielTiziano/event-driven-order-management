@@ -29,10 +29,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class PedidoServiceTest {
@@ -204,5 +201,34 @@ class PedidoServiceTest {
 
         verify(pedidoRepository, never()).save(any(Pedido.class));
         verify(servicoBancarioClient, never()).solicitarPagamento(any(Pedido.class));
+    }
+
+    @Test
+    void retryPayment_pedidoEmErroPagamento_deveReenviarCobrancaEVoltarParaRealizado() {
+        Pedido pedido = new Pedido();
+        pedido.setStatus(StatusPedido.ERRO_PAGAMENTO);
+
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+        when(servicoBancarioClient.solicitarPagamento(pedido)).thenReturn("nova-chave");
+
+        pedidoService.retryPayment(1L, MetodoPagamento.PIX, null);
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.REALIZADO);
+        assertThat(pedido.getMetodoPagamento()).isEqualTo(MetodoPagamento.PIX);
+        assertThat(pedido.getChavePagamento()).isEqualTo("nova-chave");
+        verify(pedidoValidator).validarTransicaoStatus(pedido, StatusPedido.REALIZADO);
+        verify(pedidoValidator).validarPagamento(pedido);
+        verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void retryPayment_pedidoInexistente_deveLancarPedidoNotFound() {
+        when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> pedidoService.retryPayment(99L, MetodoPagamento.PIX, null))
+                .isInstanceOf(PedidoNotFoundException.class);
+
+        verifyNoInteractions(servicoBancarioClient);
+        verify(pedidoRepository, never()).save(any());
     }
 }

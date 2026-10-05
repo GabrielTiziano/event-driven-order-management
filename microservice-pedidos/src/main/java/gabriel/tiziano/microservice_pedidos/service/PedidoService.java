@@ -4,9 +4,9 @@ import gabriel.tiziano.microservice_pedidos.client.ServicoBancarioClient;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
+import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
 import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
-import gabriel.tiziano.microservice_pedidos.exception.PagamentoInvalidoException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.Objects;
 
 @Service
 public class PedidoService {
@@ -71,6 +70,22 @@ public class PedidoService {
         if (!aprovado) {
             pedido.setObservacoes(observacoes);
         }
+        pedidoRepository.save(pedido);
+    }
+
+    @Transactional
+    public void retryPayment(Long codigo, MetodoPagamento metodoPagamento, Integer parcelas) {
+        Pedido pedido = getPedido(codigo);
+
+        pedidoValidator.validarTransicaoStatus(pedido, StatusPedido.REALIZADO);
+
+        pedido.setMetodoPagamento(metodoPagamento);
+        pedido.setParcelas(parcelas);
+        pedidoValidator.validarPagamento(pedido);
+
+        pedido.setStatus(StatusPedido.REALIZADO);
+
+        requestPayment(pedido);
         pedidoRepository.save(pedido);
     }
 

@@ -3,6 +3,7 @@ package gabriel.tiziano.microservice_pedidos.controller;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
+import gabriel.tiziano.microservice_pedidos.dto.RetryPagamentoRequest;
 import gabriel.tiziano.microservice_pedidos.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -35,6 +36,14 @@ public class PedidoController {
     public ResponseEntity<PedidoResponse> create(@Valid @RequestBody PedidoRequest request) {
         PedidoResponse response = pedidoService.createPedido(request);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{codigo}/pagamentos")
+    public ResponseEntity<Void> retryPayment(
+            @PathVariable Long codigo,
+            @RequestBody @Valid RetryPagamentoRequest request) {
+        pedidoService.retryPayment(codigo, request.metodoPagamento(), request.parcelas());
+        return ResponseEntity.accepted().build();
     }
 
     @PatchMapping("/{codigo}/status")
