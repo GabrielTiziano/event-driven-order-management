@@ -10,6 +10,11 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+  kafka:
+    bootstrap-servers: localhost:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
 server:
   port: 8083
 
@@ -18,6 +23,11 @@ order-management-microservices:
     url: http://localhost:8084
   microservice-clientes:
     url: http://localhost:8082
+  kafka:
+    topics:
+      pedido-pago: order-management-microservices_pedidos-pagos
+      pedido-faturado: order-management-microservices_pedidos-faturados
+      pedido-enviado: order-management-microservices_pedidos-enviados
 
 webhook:
   payments:
