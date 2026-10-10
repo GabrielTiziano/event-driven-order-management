@@ -26,6 +26,9 @@ public class Pedido {
     @Column(name = "codigo_cliente", nullable = false)
     private Long codigoCliente;
 
+    @Embedded
+    private DadosCliente dadosCliente;
+
     @Column(name = "data_pedido", nullable = false)
     private LocalDateTime dataPedido;
 

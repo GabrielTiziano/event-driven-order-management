@@ -1,5 +1,9 @@
 package gabriel.tiziano.microservice_pedidos;
 
+import gabriel.tiziano.microservice_pedidos.client.ClientesClient;
+import gabriel.tiziano.microservice_pedidos.client.ProdutosClient;
+import gabriel.tiziano.microservice_pedidos.client.representation.ClienteRepresentation;
+import gabriel.tiziano.microservice_pedidos.client.representation.ProdutoRepresentation;
 import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
 import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
 import gabriel.tiziano.microservice_pedidos.entity.Pedido;
@@ -10,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +24,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -31,6 +38,12 @@ class PedidoIntegrationTest {
 
     @Autowired
     private PedidoRepository pedidoRepository;
+
+    @MockitoBean
+    private ClientesClient clientesClient;
+
+    @MockitoBean
+    private ProdutosClient produtosClient;
 
     private Pedido persistirPedido(StatusPedido status) {
         Pedido pedido = new Pedido();
@@ -51,6 +64,13 @@ class PedidoIntegrationTest {
 
     @Test
     void create_devePersistirPedidoComItensECalcularTotal() throws Exception {
+        when(clientesClient.findClientById(1L)).thenReturn(
+                ResponseEntity.ok(new ClienteRepresentation(1L, "Fulano", "12345678901", "fulano@email.com", "41999999999")));
+        when(produtosClient.findProductById(10L)).thenReturn(
+                ResponseEntity.ok(new ProdutoRepresentation(10L, new BigDecimal("10.00"), 100, "Produto A")));
+        when(produtosClient.findProductById(20L)).thenReturn(
+                ResponseEntity.ok(new ProdutoRepresentation(20L, new BigDecimal("5.00"), 100, "Produto B")));
+
         String json = """
                 {
                   "codigoCliente": 1,
@@ -87,6 +107,10 @@ class PedidoIntegrationTest {
         assertThat(pedidos.get(0).getParcelas()).isEqualTo(3);
         assertThat(pedidos.get(0).getEnderecoEntrega().getCidade()).isEqualTo("Curitiba");
         assertThat(pedidos.get(0).getChavePagamento()).isNotBlank();
+        assertThat(pedidos.get(0).getDadosCliente().getNome()).isEqualTo("Fulano");
+        assertThat(pedidos.get(0).getItens())
+                .extracting(ItemPedido::getNomeProduto)
+                .containsExactlyInAnyOrder("Produto A", "Produto B");
     }
 
     @Test

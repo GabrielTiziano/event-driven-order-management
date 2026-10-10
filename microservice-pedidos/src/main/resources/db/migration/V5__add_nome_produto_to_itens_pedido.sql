@@ -1,0 +1,1 @@
+ALTER TABLE itens_pedido ADD COLUMN nome_produto VARCHAR(255);

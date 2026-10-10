@@ -1,6 +1,10 @@
 package gabriel.tiziano.microservice_pedidos.service;
 
+import gabriel.tiziano.microservice_pedidos.client.ClientesClient;
+import gabriel.tiziano.microservice_pedidos.client.ProdutosClient;
 import gabriel.tiziano.microservice_pedidos.client.ServicoBancarioClient;
+import gabriel.tiziano.microservice_pedidos.client.representation.ClienteRepresentation;
+import gabriel.tiziano.microservice_pedidos.client.representation.ProdutoRepresentation;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoItemRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
@@ -20,6 +24,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -42,6 +47,12 @@ class PedidoServiceTest {
 
     @Mock
     private ServicoBancarioClient servicoBancarioClient;
+
+    @Mock
+    private ClientesClient clientesClient;
+
+    @Mock
+    private ProdutosClient produtosClient;
 
     @InjectMocks
     private PedidoService pedidoService;
@@ -104,7 +115,11 @@ class PedidoServiceTest {
     }
 
     @Test
-    void createPedido_devePersistirComStatusInicialERetornarResponse() {
+    void createPedido_devePersistirComStatusInicialESnapshotECalcularTotal() {
+        when(clientesClient.findClientById(1L)).thenReturn(
+                ResponseEntity.ok(new ClienteRepresentation(1L, "Fulano", "12345678901", "fulano@email.com", "41999999999")));
+        when(produtosClient.findProductById(10L)).thenReturn(
+                ResponseEntity.ok(new ProdutoRepresentation(10L, new BigDecimal("10.00"), 100, "Produto A")));
         when(servicoBancarioClient.solicitarPagamento(any(Pedido.class))).thenReturn("chave-pagamento-123");
         when(pedidoRepository.save(any(Pedido.class))).thenReturn(pedidoSalvo(10L, StatusPedido.REALIZADO));
 
@@ -117,7 +132,12 @@ class PedidoServiceTest {
         assertThat(enviado.getCodigo()).isNull();
         assertThat(enviado.getStatus()).isEqualTo(StatusPedido.REALIZADO);
         assertThat(enviado.getChavePagamento()).isEqualTo("chave-pagamento-123");
+        assertThat(enviado.getDadosCliente()).isNotNull();
+        assertThat(enviado.getDadosCliente().getNome()).isEqualTo("Fulano");
         assertThat(enviado.getItens()).hasSize(1);
+        assertThat(enviado.getItens().get(0).getNomeProduto()).isEqualTo("Produto A");
+        assertThat(enviado.getItens().get(0).getValorUnitario()).isEqualByComparingTo("10.00");
+        assertThat(enviado.getTotal()).isEqualByComparingTo("20.00");
         assertThat(response.codigo()).isEqualTo(10L);
     }
 
@@ -201,6 +221,7 @@ class PedidoServiceTest {
 
         verify(pedidoRepository, never()).save(any(Pedido.class));
         verify(servicoBancarioClient, never()).solicitarPagamento(any(Pedido.class));
+        verifyNoInteractions(clientesClient, produtosClient);
     }
 
     @Test

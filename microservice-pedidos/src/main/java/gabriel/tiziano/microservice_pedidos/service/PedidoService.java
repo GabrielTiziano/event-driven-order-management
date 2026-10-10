@@ -1,19 +1,25 @@
 package gabriel.tiziano.microservice_pedidos.service;
 
+import feign.FeignException;
+import gabriel.tiziano.microservice_pedidos.client.ClientesClient;
+import gabriel.tiziano.microservice_pedidos.client.ProdutosClient;
 import gabriel.tiziano.microservice_pedidos.client.ServicoBancarioClient;
+import gabriel.tiziano.microservice_pedidos.client.representation.ClienteRepresentation;
+import gabriel.tiziano.microservice_pedidos.client.representation.ProdutoRepresentation;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
-import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
-import gabriel.tiziano.microservice_pedidos.entity.Pedido;
-import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
+import gabriel.tiziano.microservice_pedidos.entity.*;
+import gabriel.tiziano.microservice_pedidos.exception.ClienteNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
+import gabriel.tiziano.microservice_pedidos.exception.ProdutoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -22,11 +28,15 @@ public class PedidoService {
     private final PedidoRepository pedidoRepository;
     private final PedidoValidator pedidoValidator;
     private final ServicoBancarioClient servicoBancarioClient;
+    private final ClientesClient clientesClient;
+    private final ProdutosClient produtosClient;
 
-    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator, ServicoBancarioClient servicoBancarioClient) {
+    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator, ServicoBancarioClient servicoBancarioClient, ClientesClient clientesClient, ProdutosClient produtosClient) {
         this.pedidoRepository = pedidoRepository;
         this.pedidoValidator = pedidoValidator;
         this.servicoBancarioClient = servicoBancarioClient;
+        this.clientesClient = clientesClient;
+        this.produtosClient = produtosClient;
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +55,13 @@ public class PedidoService {
     @Transactional
     public PedidoResponse createPedido(PedidoRequest request) {
         Pedido pedido = PedidoMapper.toEntity(request);
+
         pedidoValidator.validarPagamento(pedido);
+
+        snapshotCliente(pedido);
+        pedido.getItens().forEach(this::snapshotProduto);
+        pedido.setTotal(calcularTotal(pedido));
+
         requestPayment(pedido);
         return PedidoMapper.toResponse(pedidoRepository.save(pedido));
     }
@@ -105,5 +121,33 @@ public class PedidoService {
     private Pedido getPedido(Long codigo) {
         return pedidoRepository.findById(codigo)
                 .orElseThrow(() -> new PedidoNotFoundException(codigo));
+    }
+
+    private void snapshotCliente(Pedido pedido) {
+        ClienteRepresentation cliente;
+        try {
+            cliente = clientesClient.findClientById(pedido.getCodigoCliente()).getBody();
+        } catch (FeignException.NotFound e) {
+            throw new ClienteNotFoundException(pedido.getCodigoCliente());
+        }
+        pedido.setDadosCliente(new DadosCliente(
+                cliente.nome(), cliente.cpf(), cliente.email(), cliente.telefone()));
+    }
+
+    private void snapshotProduto(ItemPedido item) {
+        ProdutoRepresentation produto;
+        try {
+            produto = produtosClient.findProductById(item.getCodigoProduto()).getBody();
+        } catch (FeignException.NotFound e) {
+            throw new ProdutoNotFoundException(item.getCodigoProduto());
+        }
+        item.setNomeProduto(produto.nome());
+        item.setValorUnitario(produto.preco());
+    }
+
+    private BigDecimal calcularTotal(Pedido pedido) {
+        return pedido.getItens().stream()
+                .map(i -> i.getValorUnitario().multiply(BigDecimal.valueOf(i.getQuantidade())))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
