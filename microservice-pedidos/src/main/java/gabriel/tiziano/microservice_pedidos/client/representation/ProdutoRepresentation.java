@@ -5,6 +5,7 @@ import java.math.BigDecimal;
 public record ProdutoRepresentation(
         Long codigo,
         BigDecimal preco,
-        Integer quantidade
+        Integer quantidade,
+        String nome
 ) {
 }
