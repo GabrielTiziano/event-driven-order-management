@@ -10,14 +10,17 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.*;
+import gabriel.tiziano.microservice_pedidos.event.PedidoPagoEvent;
 import gabriel.tiziano.microservice_pedidos.exception.ClienteNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.ProdutoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
 import gabriel.tiziano.microservice_pedidos.publisher.DetalhePedidoMapper;
+import gabriel.tiziano.microservice_pedidos.publisher.PagamentoPublisher;
 import gabriel.tiziano.microservice_pedidos.publisher.representation.DetalhePedidoRepresentation;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,13 +35,17 @@ public class PedidoService {
     private final ServicoBancarioClient servicoBancarioClient;
     private final ClientesClient clientesClient;
     private final ProdutosClient produtosClient;
+    private final PagamentoPublisher pagamentoPublisher;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
-    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator, ServicoBancarioClient servicoBancarioClient, ClientesClient clientesClient, ProdutosClient produtosClient) {
+    public PedidoService(PedidoRepository pedidoRepository, PedidoValidator pedidoValidator, ServicoBancarioClient servicoBancarioClient, ClientesClient clientesClient, ProdutosClient produtosClient, PagamentoPublisher pagamentoPublisher, ApplicationEventPublisher applicationEventPublisher) {
         this.pedidoRepository = pedidoRepository;
         this.pedidoValidator = pedidoValidator;
         this.servicoBancarioClient = servicoBancarioClient;
         this.clientesClient = clientesClient;
         this.produtosClient = produtosClient;
+        this.pagamentoPublisher = pagamentoPublisher;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     @Transactional(readOnly = true)
@@ -89,6 +96,10 @@ public class PedidoService {
             pedido.setObservacoes(observacoes);
         }
         pedidoRepository.save(pedido);
+
+        if (aprovado) {
+            applicationEventPublisher.publishEvent(new PedidoPagoEvent(DetalhePedidoMapper.toDetalhePedido(pedido)));
+        }
     }
 
     @Transactional

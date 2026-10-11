@@ -10,6 +10,7 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.entity.*;
+import gabriel.tiziano.microservice_pedidos.event.PedidoPagoEvent;
 import gabriel.tiziano.microservice_pedidos.exception.PagamentoInvalidoException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
@@ -22,6 +23,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.ResponseEntity;
 
 import java.math.BigDecimal;
@@ -51,6 +53,9 @@ class PedidoServiceTest {
 
     @Mock
     private ProdutosClient produtosClient;
+
+    @Mock
+    private ApplicationEventPublisher applicationEventPublisher;
 
     @InjectMocks
     private PedidoService pedidoService;
@@ -274,5 +279,30 @@ class PedidoServiceTest {
         assertThatThrownBy(() -> pedidoService.findDetalhePedido(99L))
                 .isInstanceOf(PedidoNotFoundException.class)
                 .hasMessageContaining("99");
+    }
+
+    @Test
+    void confirmPayment_aprovado_deveMarcarPagoEPublicarEvento() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.REALIZADO);
+        when(pedidoRepository.findByCodigoAndChavePagamento(1L, "chave-123")).thenReturn(Optional.of(pedido));
+
+        pedidoService.confirmPayment(1L, "chave-123", true, null);
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PAGO);
+        verify(applicationEventPublisher).publishEvent(any(PedidoPagoEvent.class));
+        verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void confirmPayment_recusado_deveMarcarErroENaoPublicarEvento() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.REALIZADO);
+        when(pedidoRepository.findByCodigoAndChavePagamento(1L, "chave-123")).thenReturn(Optional.of(pedido));
+
+        pedidoService.confirmPayment(1L, "chave-123", false, "cartao recusado");
+
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.ERRO_PAGAMENTO);
+        assertThat(pedido.getObservacoes()).isEqualTo("cartao recusado");
+        verify(applicationEventPublisher, never()).publishEvent(any());
+        verify(pedidoRepository).save(pedido);
     }
 }
