@@ -1,0 +1,30 @@
+services:
+  rustfs:
+    image: rustfs/rustfs:1.0.0
+    container_name: rustfs
+    environment:
+      RUSTFS_ACCESS_KEY: minioadmin
+      RUSTFS_SECRET_KEY: minioadmin
+      RUSTFS_CONSOLE_ENABLE: "true"
+    ports:
+      - "9000:9000"   # API S3
+      - "9001:9001"   # Console
+    volumes:
+      - rustfs-data:/data
+
+  createbuckets:
+    image: amazon/aws-cli:latest
+    depends_on:
+      - rustfs
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_DEFAULT_REGION: us-east-1
+    entrypoint: >
+      /bin/sh -c "
+      until aws --endpoint-url http://rustfs:9000 s3 ls; do echo 'aguardando rustfs...'; sleep 2; done;
+      aws --endpoint-url http://rustfs:9000 s3 mb s3://notas-fiscais || true;
+      "
+
+volumes:
+  rustfs-data:
