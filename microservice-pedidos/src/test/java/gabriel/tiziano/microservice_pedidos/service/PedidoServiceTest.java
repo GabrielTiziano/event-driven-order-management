@@ -9,13 +9,11 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoItemRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
-import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
-import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
-import gabriel.tiziano.microservice_pedidos.entity.Pedido;
-import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
+import gabriel.tiziano.microservice_pedidos.entity.*;
 import gabriel.tiziano.microservice_pedidos.exception.PagamentoInvalidoException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.TransicaoStatusInvalidaException;
+import gabriel.tiziano.microservice_pedidos.publisher.representation.DetalhePedidoRepresentation;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
 import org.junit.jupiter.api.Test;
@@ -251,5 +249,30 @@ class PedidoServiceTest {
 
         verifyNoInteractions(servicoBancarioClient);
         verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void findDetalhePedido_quandoExiste_deveRetornarDetalheComSnapshot() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.PAGO);
+        pedido.setDadosCliente(new DadosCliente("Fulano", "12345678901", "fulano@email.com", "41999999999"));
+        pedido.getItens().get(0).setNomeProduto("Produto A");
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        DetalhePedidoRepresentation detalhe = pedidoService.findDetalhePedido(1L);
+
+        assertThat(detalhe.codigoPedido()).isEqualTo(1L);
+        assertThat(detalhe.nome()).isEqualTo("Fulano");
+        assertThat(detalhe.cpf()).isEqualTo("12345678901");
+        assertThat(detalhe.itens()).hasSize(1);
+        assertThat(detalhe.itens().get(0).nomeProduto()).isEqualTo("Produto A");
+    }
+
+    @Test
+    void findDetalhePedido_quandoNaoExiste_deveLancarPedidoNotFound() {
+        when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> pedidoService.findDetalhePedido(99L))
+                .isInstanceOf(PedidoNotFoundException.class)
+                .hasMessageContaining("99");
     }
 }

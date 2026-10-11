@@ -4,10 +4,7 @@ import gabriel.tiziano.microservice_pedidos.client.ClientesClient;
 import gabriel.tiziano.microservice_pedidos.client.ProdutosClient;
 import gabriel.tiziano.microservice_pedidos.client.representation.ClienteRepresentation;
 import gabriel.tiziano.microservice_pedidos.client.representation.ProdutoRepresentation;
-import gabriel.tiziano.microservice_pedidos.entity.ItemPedido;
-import gabriel.tiziano.microservice_pedidos.entity.MetodoPagamento;
-import gabriel.tiziano.microservice_pedidos.entity.Pedido;
-import gabriel.tiziano.microservice_pedidos.entity.StatusPedido;
+import gabriel.tiziano.microservice_pedidos.entity.*;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -193,5 +190,42 @@ class PedidoIntegrationTest {
                 .andExpect(status().isUnprocessableEntity());
 
         assertThat(pedidoRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    void obterDetalhes_quandoExiste_deveRetornar200ComSnapshot() throws Exception {
+        Pedido pedido = new Pedido();
+        pedido.setCodigoCliente(1L);
+        pedido.setDataPedido(LocalDateTime.now());
+        pedido.setStatus(StatusPedido.PAGO);
+        pedido.setMetodoPagamento(MetodoPagamento.PIX);
+        pedido.setTotal(new BigDecimal("20.00"));
+        pedido.setDadosCliente(new DadosCliente("Fulano", "12345678901", "fulano@email.com", "41999999999"));
+        pedido.setEnderecoEntrega(new Endereco("Rua A", "100", "Centro", "Curitiba", "80000000"));
+
+        ItemPedido item = new ItemPedido();
+        item.setCodigoProduto(10L);
+        item.setNomeProduto("Produto A");
+        item.setQuantidade(2);
+        item.setValorUnitario(new BigDecimal("10.00"));
+        pedido.addItem(item);
+
+        Pedido salvo = pedidoRepository.save(pedido);
+
+        mockMvc.perform(get("/pedidos/{codigo}/detalhes", salvo.getCodigo()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.codigoPedido").value(salvo.getCodigo()))
+                .andExpect(jsonPath("$.nome").value("Fulano"))
+                .andExpect(jsonPath("$.cpf").value("12345678901"))
+                .andExpect(jsonPath("$.logradouro").value("Rua A"))
+                .andExpect(jsonPath("$.statusPedido").value("PAGO"))
+                .andExpect(jsonPath("$.itens.length()").value(1))
+                .andExpect(jsonPath("$.itens[0].nomeProduto").value("Produto A"));
+    }
+
+    @Test
+    void obterDetalhes_quandoNaoExiste_deveRetornar404() throws Exception {
+        mockMvc.perform(get("/pedidos/{codigo}/detalhes", 99999L))
+                .andExpect(status().isNotFound());
     }
 }

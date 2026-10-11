@@ -14,6 +14,8 @@ import gabriel.tiziano.microservice_pedidos.exception.ClienteNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.PedidoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.exception.ProdutoNotFoundException;
 import gabriel.tiziano.microservice_pedidos.mapper.PedidoMapper;
+import gabriel.tiziano.microservice_pedidos.publisher.DetalhePedidoMapper;
+import gabriel.tiziano.microservice_pedidos.publisher.representation.DetalhePedidoRepresentation;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
 import org.springframework.stereotype.Service;
@@ -149,5 +151,10 @@ public class PedidoService {
         return pedido.getItens().stream()
                 .map(i -> i.getValorUnitario().multiply(BigDecimal.valueOf(i.getQuantidade())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    @Transactional(readOnly = true)
+    public DetalhePedidoRepresentation findDetalhePedido(Long codigo) {
+        return DetalhePedidoMapper.toDetalhePedido(getPedido(codigo));
     }
 }
