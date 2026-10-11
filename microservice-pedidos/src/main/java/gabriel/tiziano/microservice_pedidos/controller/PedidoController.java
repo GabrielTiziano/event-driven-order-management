@@ -4,6 +4,7 @@ import gabriel.tiziano.microservice_pedidos.dto.PedidoRequest;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoResponse;
 import gabriel.tiziano.microservice_pedidos.dto.PedidoStatusRequest;
 import gabriel.tiziano.microservice_pedidos.dto.RetryPagamentoRequest;
+import gabriel.tiziano.microservice_pedidos.publisher.representation.DetalhePedidoRepresentation;
 import gabriel.tiziano.microservice_pedidos.service.PedidoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -30,6 +31,11 @@ public class PedidoController {
     @GetMapping("/{codigo}")
     public ResponseEntity<PedidoResponse> findById(@PathVariable Long codigo) {
         return ResponseEntity.ok(pedidoService.findPedidoById(codigo));
+    }
+
+    @GetMapping("/{codigo}/detalhes")
+    public ResponseEntity<DetalhePedidoRepresentation> obterDetalhes(@PathVariable Long codigo) {
+        return ResponseEntity.ok(pedidoService.findDetalhePedido(codigo));
     }
 
     @PostMapping
