@@ -1,0 +1,41 @@
+spring:
+  application:
+    name: microservice-faturamento
+  datasource:
+    url: jdbc:postgresql://localhost:5556/ms_faturamento
+    username: postgres
+    password: postgres
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: microservice-faturamento
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+      properties:
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: gabriel.tiziano.microservice_faturamento.consumer.representation.PedidoPagoRepresentation
+        spring.json.trusted.packages: "gabriel.tiziano.microservice_faturamento.*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JacksonJsonSerializer
+
+server:
+  port: 8085
+
+order-management-microservices:
+  kafka:
+    topics:
+      pedido-pago: order-management-microservices_pedidos-pagos
+      pedido-faturado: order-management-microservices_pedidos-faturados
+  storage:
+    endpoint: http://localhost:9000
+    access-key: minioadmin
+    secret-key: ${STORAGE_SECRET_KEY:minioadmin}
+    region: us-east-1
+    bucket: notas-fiscais
