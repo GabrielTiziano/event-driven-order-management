@@ -305,4 +305,39 @@ class PedidoServiceTest {
         verify(applicationEventPublisher, never()).publishEvent(any());
         verify(pedidoRepository).save(pedido);
     }
+
+    @Test
+    void confirmInvoicingDeveTransicionarParaFaturadoEGravarUrlNf() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.PAGO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        pedidoService.markOrderAsInvoiced(1L, "nota-fiscal-1.pdf");
+
+        verify(pedidoValidator).validarTransicaoStatus(pedido, StatusPedido.FATURADO);
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.FATURADO);
+        assertThat(pedido.getUrlNf()).isEqualTo("nota-fiscal-1.pdf");
+        verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void confirmInvoicingDeveIgnorarQuandoPedidoJaFaturado() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.FATURADO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        pedidoService.markOrderAsInvoiced(1L, "nota-fiscal-1.pdf");
+
+        verify(pedidoValidator, never()).validarTransicaoStatus(any(), any());
+        verify(pedidoRepository, never()).save(any());
+        assertThat(pedido.getUrlNf()).isNull();
+    }
+
+    @Test
+    void confirmInvoicingDeveLancarQuandoPedidoNaoExiste() {
+        when(pedidoRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> pedidoService.markOrderAsInvoiced(99L, "nota-fiscal-99.pdf"))
+                .isInstanceOf(PedidoNotFoundException.class);
+
+        verify(pedidoRepository, never()).save(any());
+    }
 }
