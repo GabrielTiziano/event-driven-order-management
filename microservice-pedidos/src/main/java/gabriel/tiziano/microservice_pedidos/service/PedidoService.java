@@ -20,6 +20,7 @@ import gabriel.tiziano.microservice_pedidos.publisher.PagamentoPublisher;
 import gabriel.tiziano.microservice_pedidos.publisher.representation.DetalhePedidoRepresentation;
 import gabriel.tiziano.microservice_pedidos.repository.PedidoRepository;
 import gabriel.tiziano.microservice_pedidos.validator.PedidoValidator;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 @Service
+@Slf4j
 public class PedidoService {
 
     private final PedidoRepository pedidoRepository;
@@ -124,6 +126,23 @@ public class PedidoService {
             throw new PedidoNotFoundException(codigo);
         }
         pedidoRepository.deleteById(codigo);
+    }
+
+    @Transactional
+    public void markOrderAsInvoiced(Long codigo, String invoiceKey) {
+        Pedido pedido = getPedido(codigo);
+
+        if (pedido.getStatus() == StatusPedido.FATURADO) {
+            log.info("Pedido {} já está FATURADO — ignorando (idempotência)", codigo);
+            return;
+        }
+
+        pedidoValidator.validarTransicaoStatus(pedido, StatusPedido.FATURADO);
+        pedido.setStatus(StatusPedido.FATURADO);
+        pedido.setUrlNf(invoiceKey);
+        pedidoRepository.save(pedido);
+
+        log.info("Pedido {} faturado (urlNf={})", codigo, invoiceKey);
     }
 
     private void requestPayment(Pedido pedido) {
