@@ -5,6 +5,9 @@ import gabriel.tiziano.microservice_faturamento.consumer.representation.PedidoPa
 import gabriel.tiziano.microservice_faturamento.entity.NotaFiscal;
 import gabriel.tiziano.microservice_faturamento.entity.StatusNotaFiscal;
 import gabriel.tiziano.microservice_faturamento.exception.ArmazenamentoNotaFiscalException;
+import gabriel.tiziano.microservice_faturamento.exception.GeracaoNotaFiscalException;
+import gabriel.tiziano.microservice_faturamento.publisher.FaturamentoPublisher;
+import gabriel.tiziano.microservice_faturamento.publisher.representation.PedidoFaturadoRepresentation;
 import gabriel.tiziano.microservice_faturamento.repository.NotaFiscalRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,50 +39,68 @@ class FaturamentoServiceTest {
     private GeradorNotaFiscalService geradorNotaFiscalService;
     @Mock
     private BucketService bucketService;
+    @Mock
+    private FaturamentoPublisher faturamentoPublisher;
 
     @InjectMocks
     private FaturamentoService faturamentoService;
 
     @Test
     void naoDeveFaturarQuandoNotaJaExiste() {
-        PedidoPagoRepresentation evento = evento(100L);
         when(notaFiscalRepository.existsByCodigoPedido(100L)).thenReturn(true);
 
-        faturamentoService.faturar(evento);
+        faturamentoService.faturar(evento(100L));
 
-        verifyNoInteractions(geradorNotaFiscalService, bucketService);
+        verifyNoInteractions(geradorNotaFiscalService, bucketService, faturamentoPublisher);
         verify(notaFiscalRepository, never()).save(any());
     }
 
     @Test
-    void deveGerarFazerUploadETornarNotaEmitidaNoFluxoFeliz() {
-        PedidoPagoRepresentation evento = evento(100L);
+    void deveEmitirNotaEPublicarEventoNoFluxoFeliz() {
         when(notaFiscalRepository.existsByCodigoPedido(100L)).thenReturn(false);
         when(geradorNotaFiscalService.gerarNotaFiscal(any())).thenReturn(new byte[]{1, 2, 3});
 
-        faturamentoService.faturar(evento);
+        faturamentoService.faturar(evento(100L));
 
         verify(bucketService).upload(eq("nota-fiscal-100.pdf"), any(byte[].class), eq("application/pdf"));
 
-        ArgumentCaptor<NotaFiscal> captor = ArgumentCaptor.forClass(NotaFiscal.class);
-        verify(notaFiscalRepository).save(captor.capture());
-        NotaFiscal salva = captor.getValue();
+        ArgumentCaptor<NotaFiscal> notaCaptor = ArgumentCaptor.forClass(NotaFiscal.class);
+        verify(notaFiscalRepository).save(notaCaptor.capture());
+        NotaFiscal salva = notaCaptor.getValue();
         assertThat(salva.getStatus()).isEqualTo(StatusNotaFiscal.EMITIDA);
         assertThat(salva.getChaveArquivo()).isEqualTo("nota-fiscal-100.pdf");
-        assertThat(salva.getCodigoPedido()).isEqualTo(100L);
+
+        ArgumentCaptor<PedidoFaturadoRepresentation> eventoCaptor =
+                ArgumentCaptor.forClass(PedidoFaturadoRepresentation.class);
+        verify(faturamentoPublisher).publicar(eventoCaptor.capture());
+        assertThat(eventoCaptor.getValue().codigoPedido()).isEqualTo(100L);
+        assertThat(eventoCaptor.getValue().chaveArquivo()).isEqualTo("nota-fiscal-100.pdf");
     }
 
     @Test
-    void deveLancarArmazenamentoExceptionENaoSalvarQuandoUploadFalha() {
-        PedidoPagoRepresentation evento = evento(100L);
+    void deveLancarArmazenamentoExceptionENaoSalvarNemPublicarQuandoUploadFalha() {
         when(notaFiscalRepository.existsByCodigoPedido(100L)).thenReturn(false);
         when(geradorNotaFiscalService.gerarNotaFiscal(any())).thenReturn(new byte[]{1});
         doThrow(new RuntimeException("falha no storage"))
                 .when(bucketService).upload(anyString(), any(byte[].class), anyString());
 
-        assertThatThrownBy(() -> faturamentoService.faturar(evento))
+        assertThatThrownBy(() -> faturamentoService.faturar(evento(100L)))
                 .isInstanceOf(ArmazenamentoNotaFiscalException.class);
 
+        verify(notaFiscalRepository, never()).save(any());
+        verify(faturamentoPublisher, never()).publicar(any());
+    }
+
+    @Test
+    void devePropagarGeracaoExceptionENaoSubirSalvarNemPublicarQuandoGeracaoFalha() {
+        when(notaFiscalRepository.existsByCodigoPedido(100L)).thenReturn(false);
+        when(geradorNotaFiscalService.gerarNotaFiscal(any()))
+                .thenThrow(new GeracaoNotaFiscalException(100L, new RuntimeException("falha jasper")));
+
+        assertThatThrownBy(() -> faturamentoService.faturar(evento(100L)))
+                .isInstanceOf(GeracaoNotaFiscalException.class);
+
+        verifyNoInteractions(bucketService, faturamentoPublisher);
         verify(notaFiscalRepository, never()).save(any());
     }
 
