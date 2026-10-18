@@ -2,7 +2,7 @@ spring:
   application:
     name: microservice-faturamento
   datasource:
-    url: jdbc:postgresql://localhost:5556/ms_faturamento
+    url: jdbc:postgresql://localhost:5555/ms_faturamento
     username: postgres
     password: postgres
   flyway:
