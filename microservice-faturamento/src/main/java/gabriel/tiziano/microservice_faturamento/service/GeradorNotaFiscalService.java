@@ -10,6 +10,7 @@ import net.sf.jasperreports.engine.data.JRMapCollectionDataSource;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -47,7 +48,7 @@ public class GeradorNotaFiscalService {
         }
     }
 
-    private Map<String, Object> montarParametros(NotaFiscal nota) {
+    private Map<String, Object> montarParametros(NotaFiscal nota) throws IOException {
         Map<String, Object> p = new HashMap<>();
         p.put("NOME", nota.getDadosCliente().getNome());
         p.put("CPF", nota.getDadosCliente().getCpf());
@@ -58,7 +59,7 @@ public class GeradorNotaFiscalService {
         p.put("BAIRRO", nota.getEnderecoEntrega().getBairro());
         p.put("DATA_PEDIDO", nota.getDataEmissao().format(DATA_FORMATTER));
         p.put("TOTAL_PEDIDO", nota.getValorTotal());
-        p.put("LOGO", null);
+        p.put("LOGO", new ClassPathResource("reports/logo.png").getInputStream());
         return p;
     }
 

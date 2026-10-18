@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!-- Created with Jaspersoft Studio version 7.0.2.final using JasperReports Library version 7.0.0  -->
 <jasperReport name="nota-fiscal" language="java" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20" uuid="4c57712b-e417-432a-8afe-dd1542fa08e5">
 	<property name="com.jaspersoft.studio.data.defaultdataadapter" value="One Empty Record"/>
@@ -10,7 +11,7 @@
 	<parameter name="TELEFONE" class="java.lang.String"/>
 	<parameter name="DATA_PEDIDO" class="java.lang.String"/>
 	<parameter name="TOTAL_PEDIDO" class="java.math.BigDecimal"/>
-	<parameter name="LOGO" class="java.lang.String"/>
+	<parameter name="LOGO" class="java.io.InputStream"/>
 	<query language="sql"><![CDATA[]]></query>
 	<field name="codigo" class="java.lang.Long"/>
 	<field name="nome" class="java.lang.String"/>
@@ -96,7 +97,7 @@
 				<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 			</box>
 		</element>
-		<element kind="staticText" uuid="66c63877-8afe-4170-b7bf-76f88edcd009" x="0" y="20" width="60" height="20" vTextAlign="Middle">
+		<element kind="staticText" uuid="66c63877-8afe-4170-b7bf-76f88edcd009" x="0" y="20" width="60" height="20" fontSize="9" vTextAlign="Middle">
 			<paragraph leftIndent="4"/>
 			<text><![CDATA[Logradouro:]]></text>
 			<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
@@ -240,7 +241,7 @@
 				<rightPen lineWidth="1.0" lineStyle="Solid" lineColor="#000000"/>
 			</box>
 		</element>
-		<element kind="textField" uuid="9ad15ce3-273d-4f4d-9ac9-54437d4fd675" x="330" y="60" width="222" height="20" pattern="¤#,##0.##;¤-#,##0.##" vTextAlign="Middle">
+		<element kind="textField" uuid="9ad15ce3-273d-4f4d-9ac9-54437d4fd675" x="330" y="60" width="222" height="20" pattern="¤ #,##0.00;¤ -#,##0.00" vTextAlign="Middle">
 			<paragraph leftIndent="4"/>
 			<expression><![CDATA[$P{TOTAL_PEDIDO}]]></expression>
 			<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
@@ -290,12 +291,12 @@
 				<property name="com.jaspersoft.studio.unit.width" value="px"/>
 				<property name="com.jaspersoft.studio.unit.height" value="px"/>
 			</element>
-			<element kind="textField" uuid="ee3bac50-0d61-4a36-8a4b-601d28c259df" x="410" y="0" width="70" height="20" pattern="#,##0.###;#,##0.###-" hTextAlign="Right" vTextAlign="Middle">
+			<element kind="textField" uuid="ee3bac50-0d61-4a36-8a4b-601d28c259df" x="410" y="0" width="70" height="20" pattern="¤ #,##0.00" hTextAlign="Right" vTextAlign="Middle">
 				<expression><![CDATA[$F{valorUnitario}]]></expression>
 				<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="dab3cfa8-915b-4e18-a716-8c28925061e0"/>
 				<property name="com.jaspersoft.studio.unit.height" value="px"/>
 			</element>
-			<element kind="textField" uuid="d4d8b4ed-cd10-4d84-ac50-b2efac96f1af" x="480" y="0" width="70" height="20" pattern="#,##0.###;#,##0.###-" hTextAlign="Right" vTextAlign="Middle">
+			<element kind="textField" uuid="d4d8b4ed-cd10-4d84-ac50-b2efac96f1af" x="480" y="0" width="70" height="20" pattern="¤ #,##0.00" hTextAlign="Right" vTextAlign="Middle">
 				<expression><![CDATA[$F{total}]]></expression>
 				<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="9f4e7510-cc85-497d-a815-e7f08650faf9"/>
 				<property name="com.jaspersoft.studio.unit.width" value="px"/>
@@ -304,7 +305,7 @@
 		</band>
 	</detail>
 	<columnFooter height="20" splitType="Stretch">
-		<element kind="textField" uuid="8cfb76f0-4507-4f07-8f82-45af8f9553b1" x="480" y="0" width="70" height="20" pattern="#,##0.###;#,##0.###-" vTextAlign="Middle">
+		<element kind="textField" uuid="8cfb76f0-4507-4f07-8f82-45af8f9553b1" x="470" y="0" width="80" height="20" pattern="¤ #,##0.00" vTextAlign="Middle">
 			<paragraph leftIndent="4"/>
 			<expression><![CDATA[$P{TOTAL_PEDIDO}]]></expression>
 			<property name="com.jaspersoft.studio.unit.leftIndent" value="px"/>
@@ -315,7 +316,7 @@
 				<rightPen lineWidth="0.5" lineStyle="Solid" lineColor="#000000"/>
 			</box>
 		</element>
-		<element kind="staticText" uuid="1d2b7d77-6cc0-4991-99be-6ef3161ab8d0" mode="Opaque" x="410" y="0" width="70" height="20" backcolor="#E6E6E6" bold="true" hTextAlign="Right" vTextAlign="Middle">
+		<element kind="staticText" uuid="1d2b7d77-6cc0-4991-99be-6ef3161ab8d0" mode="Opaque" x="390" y="0" width="80" height="20" backcolor="#E6E6E6" bold="true" hTextAlign="Right" vTextAlign="Middle">
 			<paragraph rightIndent="4"/>
 			<text><![CDATA[Total]]></text>
 			<property name="com.jaspersoft.studio.spreadsheet.connectionID" value="9f4e7510-cc85-497d-a815-e7f08650faf9"/>
