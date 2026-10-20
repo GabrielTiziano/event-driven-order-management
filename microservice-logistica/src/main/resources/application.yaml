@@ -1,0 +1,24 @@
+spring:
+  application:
+    name: microservice-logistica
+  datasource:
+    url: jdbc:postgresql://localhost:5555/ms_logistica
+    username: postgres
+    password: postgres
+  flyway:
+    enabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  kafka:
+    bootstrap-servers: localhost:9092
+
+server:
+  port: 8086
+
+order-management-microservices:
+  kafka:
+    topics:
+      pedido-faturado: order-management-microservices_pedidos-faturados
+      pedido-preparando-envio: order-management-microservices_pedidos-preparando-envio
+      pedido-enviado: order-management-microservices_pedidos-enviados
