@@ -12,6 +12,17 @@ spring:
       ddl-auto: validate
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: microservice-logistica
+      auto-offset-reset: earliest
+      key-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
+      properties:
+        spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
+        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: gabriel.tiziano.microservice_logistica.consumer.representation.PedidoFaturadoRepresentation
+        spring.json.trusted.packages: "gabriel.tiziano.microservice_logistica.*"
 
 server:
   port: 8086
