@@ -340,4 +340,51 @@ class PedidoServiceTest {
 
         verify(pedidoRepository, never()).save(any());
     }
+
+    @Test
+    void confirmPreparingShipment_deveTransicionarParaPreparandoEnvio() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.FATURADO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        pedidoService.confirmPreparingShipment(1L);
+
+        verify(pedidoValidator).validarTransicaoStatus(pedido, StatusPedido.PREPARANDO_ENVIO);
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.PREPARANDO_ENVIO);
+        verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void confirmPreparingShipment_quandoJaPreparandoEnvio_deveSerIdempotente() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.PREPARANDO_ENVIO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        pedidoService.confirmPreparingShipment(1L);
+
+        verify(pedidoValidator, never()).validarTransicaoStatus(any(), any());
+        verify(pedidoRepository, never()).save(any());
+    }
+
+    @Test
+    void confirmShipping_deveTransicionarParaEnviadoEGravarRastreio() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.PREPARANDO_ENVIO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        pedidoService.confirmShipping(1L, "LG123456789BR");
+
+        verify(pedidoValidator).validarTransicaoStatus(pedido, StatusPedido.ENVIADO);
+        assertThat(pedido.getStatus()).isEqualTo(StatusPedido.ENVIADO);
+        assertThat(pedido.getCodigoRastreio()).isEqualTo("LG123456789BR");
+        verify(pedidoRepository).save(pedido);
+    }
+
+    @Test
+    void confirmShipping_quandoJaEnviado_deveSerIdempotente() {
+        Pedido pedido = pedidoSalvo(1L, StatusPedido.ENVIADO);
+        when(pedidoRepository.findById(1L)).thenReturn(Optional.of(pedido));
+
+        pedidoService.confirmShipping(1L, "LG999999999BR");
+
+        verify(pedidoValidator, never()).validarTransicaoStatus(any(), any());
+        verify(pedidoRepository, never()).save(any());
+    }
 }

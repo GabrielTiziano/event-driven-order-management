@@ -145,6 +145,42 @@ public class PedidoService {
         log.info("Pedido {} faturado (urlNf={})", codigo, invoiceKey);
     }
 
+    @Transactional(readOnly = true)
+    public DetalhePedidoRepresentation findDetalhePedido(Long codigo) {
+        return DetalhePedidoMapper.toDetalhePedido(getPedido(codigo));
+    }
+
+    @Transactional
+    public void confirmPreparingShipment(Long codigo) {
+        Pedido pedido = getPedido(codigo);
+
+        if (pedido.getStatus() == StatusPedido.PREPARANDO_ENVIO) {
+            log.info("Pedido {} já está PREPARANDO_ENVIO — ignorando (idempotência)", codigo);
+            return;
+        }
+
+        pedidoValidator.validarTransicaoStatus(pedido, StatusPedido.PREPARANDO_ENVIO);
+        pedido.setStatus(StatusPedido.PREPARANDO_ENVIO);
+        pedidoRepository.save(pedido);
+        log.info("Pedido {} em PREPARANDO_ENVIO", codigo);
+    }
+
+    @Transactional
+    public void confirmShipping(Long codigo, String codigoRastreio) {
+        Pedido pedido = getPedido(codigo);
+
+        if (pedido.getStatus() == StatusPedido.ENVIADO) {
+            log.info("Pedido {} já está ENVIADO — ignorando (idempotência)", codigo);
+            return;
+        }
+
+        pedidoValidator.validarTransicaoStatus(pedido, StatusPedido.ENVIADO);
+        pedido.setStatus(StatusPedido.ENVIADO);
+        pedido.setCodigoRastreio(codigoRastreio);
+        pedidoRepository.save(pedido);
+        log.info("Pedido {} ENVIADO (rastreio={})", codigo, codigoRastreio);
+    }
+
     private void requestPayment(Pedido pedido) {
         String chavePagamento = servicoBancarioClient.solicitarPagamento(pedido);
         pedido.setChavePagamento(chavePagamento);
@@ -181,10 +217,5 @@ public class PedidoService {
         return pedido.getItens().stream()
                 .map(i -> i.getValorUnitario().multiply(BigDecimal.valueOf(i.getQuantidade())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    @Transactional(readOnly = true)
-    public DetalhePedidoRepresentation findDetalhePedido(Long codigo) {
-        return DetalhePedidoMapper.toDetalhePedido(getPedido(codigo));
     }
 }
