@@ -19,10 +19,7 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.ErrorHandlingDeserializer
       properties:
         spring.deserializer.key.delegate.class: org.apache.kafka.common.serialization.StringDeserializer
-        spring.deserializer.value.delegate.class: org.springframework.kafka.support.serializer.JacksonJsonDeserializer
-        spring.json.use.type.headers: false
-        spring.json.value.default.type: gabriel.tiziano.microservice_pedidos.consumer.representation.PedidoFaturadoRepresentation
-        spring.json.trusted.packages: "gabriel.tiziano.microservice_pedidos.*"
+        spring.deserializer.value.delegate.class: org.apache.kafka.common.serialization.ByteArrayDeserializer
   jackson:
     default-property-inclusion: non_null
     deserialization:
@@ -39,6 +36,7 @@ order-management-microservices:
     topics:
       pedido-pago: order-management-microservices_pedidos-pagos
       pedido-faturado: order-management-microservices_pedidos-faturados
+      pedido-preparando-envio: order-management-microservices_pedidos-preparando-envio
       pedido-enviado: order-management-microservices_pedidos-enviados
 
 webhook:
