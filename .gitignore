@@ -14,3 +14,6 @@ target/
 *.log
 .env
 servicos/database/data/
+
+# logs de runtime do dev-up.sh
+scripts/logs/
