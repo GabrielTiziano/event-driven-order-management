@@ -174,8 +174,8 @@ O `dev-up.sh` sobe os três compose de `servicos/`, inicia os cinco serviços co
 
 A nota fiscal é gerada em PDF a cada faturamento e enviada ao storage. Dois exemplos reais produzidos pelo fluxo:
 
-![Nota fiscal de exemplo 1](docs/exemplos/nota-fiscal-exemplo-1.png)
-![Nota fiscal de exemplo 2](docs/exemplos/nota-fiscal-exemplo-2.png)
+![Nota fiscal de exemplo 1](docs/exemplos/nota-fiscal-exemplo-1.jpeg)
+![Nota fiscal de exemplo 2](docs/exemplos/nota-fiscal-exemplo-2.jpeg)
 
 ## Roadmap
 
